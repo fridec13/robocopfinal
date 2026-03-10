@@ -61,6 +61,11 @@ class RobotRepository:
         robot = await self.db.robots.find_one({"manufactureName": name})
         return Robot(**robot) if robot else None
 
+    async def find_robot_by_seq(self, seq: int) -> Optional[Robot]:
+        await self.initialize()
+        robot = await self.db.robots.find_one({"seq": seq, "IsDeleted": False})
+        return Robot(**robot) if robot else None
+
     async def find_robot_by_nickname(self, nickname: str) -> Optional[Robot]:
         await self.initialize()
         robot = await self.db.robots.find_one({"nickname": nickname})

@@ -84,16 +84,31 @@ class CameraService:
 
     def _decode_image(self, message: dict) -> Optional[np.ndarray]:
         try:
-            encoding = message.get('encoding', '')
+            # CompressedImage uses 'format', raw Image uses 'encoding'
+            encoding = message.get('encoding', '') or message.get('format', '')
             raw_data = message.get('data', '')
 
             if not raw_data:
+                logger.warning(f"[camera] empty data field, keys={list(message.keys())}")
                 return None
 
-            image_bytes = base64.b64decode(raw_data)
+            # rosbridge sends uint8[] as either base64 string or list of ints
+            if isinstance(raw_data, list):
+                image_bytes = bytes(raw_data)
+            else:
+                image_bytes = base64.b64decode(raw_data)
+
             np_arr = np.frombuffer(image_bytes, np.uint8)
 
-            if 'compressed' in encoding.lower() or 'jpeg' in encoding.lower() or 'png' in encoding.lower():
+            is_compressed = (
+                'compressed' in encoding.lower()
+                or 'jpeg' in encoding.lower()
+                or 'jpg' in encoding.lower()
+                or 'png' in encoding.lower()
+                or encoding == ''  # CompressedImage with unknown format → try imdecode
+            )
+
+            if is_compressed:
                 frame = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
             elif encoding in ('rgb8', 'bgr8'):
                 w = message.get('width', 0)
@@ -103,18 +118,22 @@ class CameraService:
                     if encoding == 'rgb8':
                         frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
                 else:
+                    logger.warning(f"[camera] raw image size mismatch: w={w} h={h} len={len(np_arr)}")
                     return None
             else:
                 frame = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
 
             if frame is not None and frame.size > 0:
                 return cv2.resize(frame, self.frame_size)
+
+            logger.warning(f"[camera] imdecode returned None, encoding={encoding!r}, data_len={len(image_bytes)}")
             return None
         except Exception as e:
-            logger.debug(f"Image decode error: {e}")
+            logger.warning(f"[camera] Image decode error: {e}")
             return None
 
     def _on_front_image(self, message: dict) -> None:
+        logger.info(f"[camera seq={self.seq}] front msg received, keys={list(message.keys())}")
         frame = self._decode_image(message)
         if frame is not None:
             try:
@@ -125,8 +144,11 @@ class CameraService:
                     self._front_queue.put_nowait(frame)
                 except Exception:
                     pass
+        else:
+            logger.warning(f"[camera seq={self.seq}] front decode returned None")
 
     def _on_rear_image(self, message: dict) -> None:
+        logger.info(f"[camera seq={self.seq}] rear msg received, keys={list(message.keys())}")
         frame = self._decode_image(message)
         if frame is not None:
             try:
@@ -137,6 +159,8 @@ class CameraService:
                     self._rear_queue.put_nowait(frame)
                 except Exception:
                     pass
+        else:
+            logger.warning(f"[camera seq={self.seq}] rear decode returned None")
 
     async def set_front_topic(self, topic_name: str, topic_type: str, is_isaac: bool = False) -> None:
         bridge = self._get_bridge(is_isaac)

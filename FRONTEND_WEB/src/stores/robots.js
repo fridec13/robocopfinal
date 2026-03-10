@@ -94,7 +94,7 @@ export const useRobotsStore = defineStore('robots', () => {
       cpuTemp: robot.cpuTemp || 0,
       waypoints: robot.waypoints || [],
       startAt: robot.startAt || new Date().toISOString(),
-      IsActive: robot.IsActive || false,
+      isActive: robot.IsActive ?? true,
       isDeleted: robot.IsDeleted || false,
       lastActive: robot.lastActive || new Date().toISOString(),
       createdAt: robot.createdAt || new Date().toISOString(),

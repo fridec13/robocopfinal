@@ -347,6 +347,54 @@ async def get_robot_down_utm(seq: int, request: Request):
         raise HTTPException(status_code=500, detail=str(e))
         
         
+@router.get("/sse/{seq}/status", tags=["robots"])
+async def get_robot_status_sse(seq: int, request: Request):
+    """
+    SSE 형식으로 로봇 상태를 전송합니다.
+    ROS status 토픽이 없을 경우 DB 데이터를 주기적으로 반환합니다.
+    """
+    try:
+        robot_service_instance = await RobotService.get_instance(seq)
+        robot_repo = robot_service_instance.repository
+
+        async def event_generator():
+            yield f"data: {json.dumps({'seq': seq, 'status': {}})}\n\n"
+            while True:
+                if await request.is_disconnected():
+                    break
+
+                live = robot_service_instance.last_status
+                if live:
+                    payload = {"seq": seq, "status": live}
+                else:
+                    try:
+                        robot = await robot_repo.find_robot_by_seq(seq)
+                        if robot:
+                            payload = {
+                                "seq": seq,
+                                "status": {
+                                    "status": robot.status,
+                                    "battery": {"level": robot.battery.level, "isCharging": robot.battery.isCharging},
+                                    "networkHealth": robot.networkHealth,
+                                    "cpuTemp": robot.cpuTemp,
+                                    "startAt": robot.startAt.isoformat() if robot.startAt else None,
+                                    "isActive": robot.IsActive,
+                                }
+                            }
+                        else:
+                            payload = {"seq": seq, "status": {}}
+                    except Exception:
+                        payload = {"seq": seq, "status": {}}
+
+                yield f"data: {json.dumps(payload)}\n\n"
+                await asyncio.sleep(2.0)
+
+        return StreamingResponse(event_generator(), media_type="text/event-stream")
+    except Exception as e:
+        logger.error(f"Status SSE 에러: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.get("/sse/1/alert", tags=["robots"])
 async def get_robot_alert( request: Request):
     """

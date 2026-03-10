@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 from fastapi import APIRouter, Path, Query, Depends, UploadFile, File, Form, Body, status, WebSocket, WebSocketDisconnect, Request
 from typing import List, Optional, Dict, Set
 from ..service.robot_service import RobotService
@@ -6,14 +5,6 @@ from ..models.robot_models import (
     Robot, StatusUpdate, StatusResponse, LogResponse, NicknameResponse  # RouteRequest, RouteResponse, MapResponse, NicknameResponse 제거
 )
 
-=======
-from fastapi import APIRouter, Path, Query, Depends, UploadFile, File, Form, Body, status, WebSocket, WebSocketDisconnect
-from typing import List, Optional, Dict, Set
-from ..service.robot_service import RobotService
-from ..models.robot_models import (
-    Robot, StatusUpdate, StatusResponse, LogResponse  # RouteRequest, RouteResponse, MapResponse 제거
-)
->>>>>>> dc86656e24a4d32ae1d229d37b8d461d9390ac23
 from ....common.models.responses import BaseResponse
 from fastapi import HTTPException
 import logging 
@@ -61,11 +52,7 @@ class RobotWebSocketManager:
 
 router = APIRouter()
 robot_service = RobotService()
-<<<<<<< HEAD
 logger = logging.getLogger(__name__)
-=======
-ws_manager = RobotWebSocketManager()  # 클래스 이름 변경
->>>>>>> dc86656e24a4d32ae1d229d37b8d461d9390ac23
 
 class RobotWebSocketManager:
     def __init__(self):
@@ -113,22 +100,14 @@ ws_manager = RobotWebSocketManager()  # 클래스 이름 변경
 
 @router.post("/", response_model=BaseResponse[Robot])
 async def create_robot(
-<<<<<<< HEAD
     nickname: str = Form(..., description="로봇 별칭 (사용자 지정)"),  # 사용자가 입력하는 이름
-=======
-    name: str = Form(..., description="로봇 별칭 (사용자 지정)"),  # 사용자가 입력하는 이름
->>>>>>> dc86656e24a4d32ae1d229d37b8d461d9390ac23
     ipAddress: str = Form(...),
     image: Optional[UploadFile] = File(None)
 ):
     """로봇을 생성합니다. FormData로 이미지와 함께 데이터를 받습니다."""
     try:
         robot = await robot_service.create_robot(
-<<<<<<< HEAD
             nickname=nickname,  # 사용자가 입력한 이름은 nickname으로
-=======
-            nickname=name,  # 사용자가 입력한 이름은 nickname으로
->>>>>>> dc86656e24a4d32ae1d229d37b8d461d9390ac23
             ip_address=ipAddress,
             image=image
         )
@@ -253,7 +232,6 @@ async def update_robot_status(
             detail=f"로봇 상태 변경 중 오류가 발생했습니다: {str(e)}"
         )
 
-<<<<<<< HEAD
 @router.patch("/{seq}/nickname", response_model=BaseResponse[NicknameResponse])
 async def update_robot_nickname(
     seq: int = Path(..., description="로봇 ID"),
@@ -310,29 +288,10 @@ async def robot_monitoring(
         ros_robot_id = "robot_1"
         logger.info(f"ROS2 토픽 구독 시작: {ros_robot_id}")
         await robot_service.subscribe_to_robot_status(ros_robot_id)
-=======
-@router.websocket("/ws/{robot_id}")
-async def websocket_endpoint(
-    websocket: WebSocket, 
-    robot_id: int,
-    robot_service: RobotService = Depends()
-):
-    """로봇의 실시간 데이터를 위한 WebSocket 엔드포인트"""
-    try:
-        # 로봇 존재 여부 확인
-        robot = await robot_service.get_robot(robot_id)
-        if not robot:
-            await websocket.close(code=4004, reason="Robot not found")
-            return
-
-        # WebSocket 연결
-        await ws_manager.connect(websocket, robot_id)
->>>>>>> dc86656e24a4d32ae1d229d37b8d461d9390ac23
         
         try:
             while True:
                 data = await websocket.receive_json()
-<<<<<<< HEAD
                 logger.debug(f"수신된 데이터: robot_id={robot_id}, data={data}")
                 
                 if data.get("type") == "ping":
@@ -437,12 +396,3 @@ async def get_robot_alert( request: Request):
         return StreamingResponse(event_generator(), media_type="text/event-stream")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) 
-=======
-                # 데이터 처리 로직은 추후 구현
-                await ws_manager.broadcast_to_robot(robot_id, data)
-        except WebSocketDisconnect:
-            await ws_manager.disconnect(websocket, robot_id)
-            
-    except Exception as e:
-        await websocket.close(code=4000, reason=str(e))
->>>>>>> dc86656e24a4d32ae1d229d37b8d461d9390ac23

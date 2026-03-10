@@ -243,7 +243,6 @@ class RobotRepository:
                 detail=f"로봇 상태 업데이트 실패: {str(e)}"
             )
 
-<<<<<<< HEAD
     async def update_robot_nickname(self, seq: int, new_nickname: str) -> Optional[Robot]:
         """로봇의 닉네임을 업데이트합니다."""
         await self.initialize()
@@ -284,5 +283,3 @@ class RobotRepository:
             logger.error(traceback.format_exc())
             return False
             
-=======
->>>>>>> dc86656e24a4d32ae1d229d37b8d461d9390ac23

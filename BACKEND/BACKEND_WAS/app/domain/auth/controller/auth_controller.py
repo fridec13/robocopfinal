@@ -52,21 +52,23 @@ async def get_current_user(token: str = Depends(oauth2_scheme)) -> User:
 
 @router.post("/login", response_model=Token)
 async def login(form_data: OAuth2PasswordRequestForm = Depends()):
-    user = await auth_service.authenticate_user(form_data.username, form_data.password)
-<<<<<<< HEAD
-    logger.info(f"로그인 성공: 사용자 {user.username}")
-    
-=======
-    tokens = await auth_service.create_tokens(username=form_data.username)
-    logger.info(tokens)
-
->>>>>>> dc86656e24a4d32ae1d229d37b8d461d9390ac23
-    return {
-        "accessToken": user.tokens.accessToken,
-        "refreshToken": user.tokens.refreshToken,
-        "tokenType": user.tokens.tokenType
-    }
-#나중에 반드시 확인 필요. 리프레시 토큰이 들어가는지 아닌지 알아야함.
+    try:
+        user = await auth_service.authenticate_user(form_data.username, form_data.password)
+        logger.info(f"로그인 성공: 사용자 {user.username}")
+        return {
+            "accessToken": user.tokens.accessToken,
+            "refreshToken": user.tokens.refreshToken,
+            "tokenType": user.tokens.tokenType
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"로그인 실패: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="아이디 또는 비밀번호가 올바르지 않습니다.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 @router.post("/refresh", response_model=Token)
 async def refresh_token(refresh_token: str):    
     tokens = await auth_service.refresh_tokens(refresh_token=refresh_token)
@@ -129,32 +131,18 @@ async def logout(
     current_user: User = Depends(get_current_user),
     token: str = Depends(oauth2_scheme)
 ):
-<<<<<<< HEAD
     logger.info(f"로그아웃 시도: 사용자 {current_user.username}")
-    
-    # 토큰 검증
+
     try:
         await auth_service.verify_token(token)
-        logger.info("토큰 검증 성공")
-    except:
+    except Exception:
         logger.error("유효하지 않은 토큰")
-=======
-    # 토큰 검증
-    try:
-        await auth_service.verify_token(token)
-    except:
->>>>>>> dc86656e24a4d32ae1d229d37b8d461d9390ac23
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="유효하지 않은 토큰입니다.",
             headers={"WWW-Authenticate": "Bearer"},
         )
-<<<<<<< HEAD
-    
-    # 로그아웃 처리
+
     result = await auth_service.logout(current_user.username)
     logger.info(f"로그아웃 성공: 사용자 {current_user.username}")
     return result
-=======
-    return await auth_service.logout(current_user.username)
->>>>>>> dc86656e24a4d32ae1d229d37b8d461d9390ac23

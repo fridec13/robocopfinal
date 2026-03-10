@@ -240,15 +240,7 @@ async def startup_event():
 
 
 
-<<<<<<< HEAD
-
         # Initialize collection indexes
-
-=======
-
-        # ??? ??? ???
-
->>>>>>> dc86656e24a4d32ae1d229d37b8d461d9390ac23
 
         await DatabaseConnection.init_collections()
 
@@ -292,7 +284,6 @@ async def startup_event():
 
         except Exception as e:
 
-<<<<<<< HEAD
 
             logger.warning(f"ROS Bridge connection failed: {str(e)}")
 
@@ -302,19 +293,6 @@ async def startup_event():
 
         logger.info("All initialization tasks completed")
 
-=======
-
-            logger.warning(f"??? ??? ?? ??: {str(e)}")
-
-        
-
-        
-
-
-
-        logger.info("?? ??? ??? ???????.")
-
->>>>>>> dc86656e24a4d32ae1d229d37b8d461d9390ac23
 
     except Exception as e:
 
@@ -322,7 +300,7 @@ async def startup_event():
 
         logger.error(traceback.format_exc())
 
-        raise  # DB ???? ???? ?? ????? ?????? ???? ?????? ???
+        raise  # DB connection failed, application will not start
 
 
 

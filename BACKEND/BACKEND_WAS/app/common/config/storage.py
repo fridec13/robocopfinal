@@ -4,19 +4,12 @@ from pydantic import Field
 
 class StorageSettings(BaseSettings):
     """스토리지 설정"""
-<<<<<<< HEAD
     MEDIA_SERVER_URL: str # https://~~~.org:8088
     UPLOAD_API_URL: str  # https://~~~.org:8088/api/upload
     IMAGE_STORAGE_PATH: str = ""
     VIDEO_STORAGE_PATH: str = ""
     
     MEDIA_ROOT: str
-=======
-    MEDIA_SERVER_URL: str = os.getenv("MEDIA_SERVER_URL")  # https://~~~.org:8088
-    UPLOAD_API_URL: str = os.getenv("UPLOAD_API_URL")  # https://~~~.org:8088/api/upload
-    IMAGE_STORAGE_PATH: str = MEDIA_SERVER_URL + "/image"
-    VIDEO_STORAGE_PATH: str = MEDIA_SERVER_URL + "/video"
->>>>>>> dc86656e24a4d32ae1d229d37b8d461d9390ac23
     
     # 기본 스토리지 경로
     BASE_STORAGE_PATH: str = Field(default="storage")

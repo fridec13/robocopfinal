@@ -1,11 +1,7 @@
 from fastapi import APIRouter, WebSocket, HTTPException
 from fastapi.responses import StreamingResponse
 from ....common.models.responses import BaseResponse
-<<<<<<< HEAD
 from ...robot.service.robot_service import RobotService  # robot 도메인에서 가져오기
-=======
-from ..service.camera_service import camera_service  # 싱글톤 인스턴스 import
->>>>>>> dc86656e24a4d32ae1d229d37b8d461d9390ac23
 import logging
 import roslibpy
 from ..service.camera_service import CameraService
@@ -15,7 +11,6 @@ import asyncio
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
-<<<<<<< HEAD
 # ROS 토픽 정보 상수 정의
 CAMERA_TOPICS = [
     {
@@ -188,16 +183,6 @@ async def rear_video_feed(seq: int):
         logger.error(f"Request seq: {seq}")
         raise HTTPException(status_code=500, detail=str(e))
 
-=======
-@router.get("/video_feed")
-async def video_feed():
-    """카메라 영상 스트리밍 엔드포인트"""
-    return StreamingResponse(
-        camera_service.get_frame(),
-        media_type="multipart/x-mixed-replace; boundary=frame"
-    )
-
->>>>>>> dc86656e24a4d32ae1d229d37b8d461d9390ac23
 # @router.websocket("/ws")
 # async def websocket_endpoint(websocket: WebSocket):
 #     """WebSocket 연결을 처리하는 엔드포인트"""
@@ -212,8 +197,4 @@ async def video_feed():
 #         try:
 #             await websocket.close()
 #         except:
-<<<<<<< HEAD
 #             pass
-=======
-#             pass
->>>>>>> dc86656e24a4d32ae1d229d37b8d461d9390ac23

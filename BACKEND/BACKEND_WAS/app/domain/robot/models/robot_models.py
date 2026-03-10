@@ -31,20 +31,6 @@ class RobotStatus(str, Enum):
     PATROLLING = "patrolling"
     CHARGING = "charging"
     ERROR = "error"
-<<<<<<< HEAD
-=======
-
-class NetworkStatus(str):
-    CONNECTED = "connected"
-    DISCONNECTED = "disconnected"
-    CONNECTING = "connecting"
-    DISCONNECTING = "disconnecting"
-    networkHealth: float = 100.0
-
-class Waypoint(BaseModel):
-    x: float
-    y: float
->>>>>>> dc86656e24a4d32ae1d229d37b8d461d9390ac23
 
 class NetworkStatus(str):
     CONNECTED = "connected"
@@ -60,10 +46,7 @@ class Robot(BaseModel):
     seq: int
     manufactureName: str
     nickname: str
-<<<<<<< HEAD
     sensorName: str
-=======
->>>>>>> dc86656e24a4d32ae1d229d37b8d461d9390ac23
     ipAddress: str
     networkStatus: str = NetworkStatus.CONNECTED
     status: str = RobotStatus.WAITING
@@ -145,10 +128,6 @@ class ROS2RobotStatus(BaseModel):
     cpu_temp: float
     error_code: Optional[int] = None
     error_message: Optional[str] = None
-<<<<<<< HEAD
     timestamp: datetime
 
 
-=======
-    timestamp: datetime
->>>>>>> dc86656e24a4d32ae1d229d37b8d461d9390ac23

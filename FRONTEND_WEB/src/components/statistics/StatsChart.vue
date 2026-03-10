@@ -1,7 +1,7 @@
 <template>
   <div class="flex gap-5 mb-5 justify-center">
     <div class="w-1/2 p-4 bg-white rounded-lg shadow-md border border-gray-200 text-center">
-      <h3 class="text-lg font-semibold text-gray-800 mb-3">활동 시간</h3>
+      <h3 class="text-lg font-semibold text-gray-800 mb-3">가동 시간</h3>
       <canvas ref="activityChartRef"></canvas>
     </div>
     <div class="w-1/2 p-4 bg-white rounded-lg shadow-md border border-gray-200 text-center">
@@ -28,12 +28,8 @@ let batteryChartInstance = null
 const initCharts = () => {
   if (!activityChartRef.value || !batteryChartRef.value) return
 
-  if (activityChartInstance) {
-    activityChartInstance.destroy()
-  }
-  if (batteryChartInstance) {
-    batteryChartInstance.destroy()
-  }
+  if (activityChartInstance) activityChartInstance.destroy()
+  if (batteryChartInstance) batteryChartInstance.destroy()
 
   if (!props.robots || props.robots.length === 0) return
 
@@ -46,14 +42,14 @@ const initCharts = () => {
     return (currentTime - startTime) / (1000 * 60 * 60)
   })
 
-  const batteryData = props.robots.map(robot => robot.battery)
+  const batteryData = props.robots.map(robot => robot.battery?.level ?? robot.battery ?? 0)
 
   activityChartInstance = new Chart(ctxActivity, {
     type: 'bar',
     data: {
       labels: props.robots.map(robot => robot.nickname),
       datasets: [{
-        label: '활동 시간 (시간)',
+        label: '가동 시간 (시간)',
         data: activityData,
         backgroundColor: '#1e88e5',
         borderRadius: 5
@@ -83,15 +79,7 @@ const initCharts = () => {
   })
 }
 
-watch(() => props.selectedRobot, () => {
-  initCharts()
-})
-
-watch(() => props.robots, () => {
-  initCharts()
-}, { immediate: true })
-
-onMounted(() => {
-  initCharts()
-})
+watch(() => props.selectedRobot, () => { initCharts() })
+watch(() => props.robots, () => { initCharts() }, { immediate: true })
+onMounted(() => { initCharts() })
 </script>

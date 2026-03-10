@@ -10,7 +10,6 @@ from ..models.robot_models import (
 from ....common.config.manager import get_settings
 import aiohttp
 import os
-import roslibpy
 import json
 import logging
 from redis import Redis
@@ -323,30 +322,27 @@ class RobotService:
 
     async def start_ros2_client(self):
         """ROS2 클라이언트를 시작합니다."""
-        # 연결 상태 확인
-        if not self.ros_bridge.client or not self.ros_bridge.client.is_connected:
+        if not self.ros_bridge.is_connected:
             logger.info("ROS Bridge 연결이 필요합니다.")
-            await self.ros_bridge._connect()
-        
-        # 토픽 설정
+            await self.ros_bridge.connect()
+
         topics = {
             "/robot_1/utm_pose": "geometry_msgs/PoseStamped",
             "/robot_1/status": "robot_custom_interfaces/msg/Status",
         }
-        
-        # 토픽 구독
+
         for topic_name, msg_type in topics.items():
             if topic_name not in self.topics:
                 try:
-                    topic = roslibpy.Topic(self.ros_bridge.client, topic_name, msg_type)
-                    
-                    def callback(message):
-                        processed_message = self.process_message_by_topic(topic_name, message)
-                        if processed_message:
-                            asyncio.create_task(self.broadcast_to_frontend(processed_message))
-                    
-                    topic.subscribe(callback)
-                    self.topics[topic_name] = topic
+                    def make_callback(t_name):
+                        def callback(message):
+                            processed_message = self.process_message_by_topic(t_name, message)
+                            if processed_message:
+                                asyncio.create_task(self.broadcast_to_frontend(processed_message))
+                        return callback
+
+                    await self.ros_bridge.subscribe(topic_name, msg_type, make_callback(topic_name))
+                    self.topics[topic_name] = topic_name
                     logger.info(f"토픽 구독 성공: {topic_name}")
                 except Exception as e:
                     logger.error(f"토픽 구독 실패 {topic_name}: {str(e)}")
@@ -697,11 +693,10 @@ class RobotService:
             return
     
         try:
-            if not self.ros_bridge.client or not self.ros_bridge.client.is_connected:
-                self.ros_bridge.ensure_connected()
-            topic = roslibpy.Topic(self.ros_bridge.client, topic_name, msg_type, throttle_rate=1000)  # 1000ms = 1Hz
-            topic.subscribe(self._on_down_utm_message)
-            self.topics[topic_name] = topic
+            if not self.ros_bridge.is_connected:
+                await self.ros_bridge.connect()
+            await self.ros_bridge.subscribe(topic_name, msg_type, self._on_down_utm_message)
+            self.topics[topic_name] = topic_name
         except Exception as e:
             raise
 
@@ -737,11 +732,10 @@ class RobotService:
             return
         
         try:
-            if not self.ros_bridge.client or not self.ros_bridge.client.is_connected:
-                self.ros_bridge.ensure_connected()
-            topic = roslibpy.Topic(self.ros_bridge.client, topic_name, msg_type, throttle_rate=1000)  # 1000ms = 1Hz
-            topic.subscribe(self._on_alert_message)
-            self.topics[topic_name] = topic
+            if not self.ros_bridge.is_connected:
+                await self.ros_bridge.connect()
+            await self.ros_bridge.subscribe(topic_name, msg_type, self._on_alert_message)
+            self.topics[topic_name] = topic_name
         except Exception as e:
             raise
 

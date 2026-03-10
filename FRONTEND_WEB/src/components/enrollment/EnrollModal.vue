@@ -4,10 +4,10 @@
     class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50"
   >
     <div class="bg-white p-6 rounded-lg shadow-lg w-96">
-      <h2 class="text-xl font-semibold mb-4">사용자 등록</h2>
+      <h2 class="text-xl font-semibold mb-4">?�용???�록</h2>
       <form @submit.prevent="submitForm" class="space-y-4">
         <div>
-          <label class="block font-medium mb-1">이름:</label>
+          <label class="block font-medium mb-1">?�름:</label>
           <input
             type="text"
             v-model="formData.personName"
@@ -25,7 +25,7 @@
           />
         </div>
         <div>
-          <label class="block font-medium mb-1">휴대폰 번호:</label>
+          <label class="block font-medium mb-1">?��???번호:</label>
           <input
             type="tel"
             v-model="formData.personPhone"
@@ -35,8 +35,8 @@
           />
         </div>
         <div>
-          <label class="block font-medium mb-1">등록자 사진:</label>
-          <!-- multiple 속성으로 여러 파일 선택 지원 -->
+          <label class="block font-medium mb-1">?�록???�진:</label>
+          <!-- multiple ?�성?�로 ?�러 ?�일 ?�택 지??-->
           <input
             type="file"
             @change="handleFileUpload"
@@ -51,7 +51,7 @@
             type="submit"
             class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
           >
-            등록
+            ?�록
           </button>
           <button
             type="button"
@@ -101,14 +101,14 @@ const closeModal = () => {
 };
 
 const submitForm = () => {
-  // 휴대폰 번호 포맷 적용
+  // ?��???번호 ?�맷 ?�용
   props.formData.personPhone = formatPhoneNumber(props.formData.personPhone);
 
   const newUser = {
     personName: props.formData.personName,
     personPosition: props.formData.personPosition,
     personPhone: props.formData.personPhone,
-    images: props.formData.images, // 여러 파일 객체 전달
+    images: props.formData.images, // ?�러 ?�일 객체 ?�달
     personDepartment: "",
   };
 

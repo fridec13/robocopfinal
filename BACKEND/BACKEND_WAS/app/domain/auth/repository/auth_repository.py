@@ -34,11 +34,7 @@ class AuthRepository:
         await self.connect()
         user_data = await self.collection.find_one({"username": username})
         if user_data:
-            print("Found user_data:", user_data)
             user_data["id"] = str(user_data.pop("_id"))
-            # hashedPassword를 hashed_password로 변환
-            if "hashedPassword" in user_data:
-                user_data["hashed_password"] = user_data.pop("hashedPassword")
             return User(**user_data)
         return None
 

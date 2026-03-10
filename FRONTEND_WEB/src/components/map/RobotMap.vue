@@ -19,7 +19,7 @@
 
       <div v-if="loading" class="absolute inset-0 flex flex-col items-center justify-center bg-white bg-opacity-90">
         <div class="w-10 h-10 border-4 border-gray-300 border-t-blue-500 rounded-full animate-spin"></div>
-        <span class="mt-3 text-gray-700">맵 데이터를 불러오는 중...</span>
+        <span class="mt-3 text-gray-700">�??�이?��? 불러?�는 �?..</span>
       </div>
     </div>
   </div>
@@ -47,12 +47,12 @@ use([
   LinesChart
 ])
 
-// Store 초기화
+// Store 초기??
 const robotsStore = useRobotsStore()
 const robotCommandsStore = useRobotCommandsStore()
 const emit = defineEmits(['selectedNodesChange'])
 
-// Refs 정의
+// Refs ?�의
 const containerRef = ref(null)
 const chartRef = ref(null)
 const loading = ref(true)
@@ -60,9 +60,9 @@ const mapData = ref({ nodes: [], links: [] })
 const selectedNodes = ref([])
 const imageWidth = ref(800)
 const imageHeight = ref(500)
-const robotPositions = ref(new Map()) // 여러 로봇의 위치를 저장하는 Map
+const robotPositions = ref(new Map()) // ?�러 로봇???�치�??�?�하??Map
 
-// Props 정의
+// Props ?�의
 const props = defineProps({
   showSelectedNodes: {
     type: Boolean,
@@ -92,7 +92,7 @@ const robotColors = {
   4: '#ff0000'
 }
 
-// Computed 속성
+// Computed ?�성
 const currentRobotSeq = computed(() => {
   if (props.robot) {
     return props.robot.seq
@@ -115,14 +115,14 @@ const selectedNodesInfo = computed(() => {
   }))
 })
 
-// 차트 옵션 computed
+// 차트 ?�션 computed
 const chartOption = computed(() => {
   const robotSeries = []
   
-  // 모든 로봇 위치 표시
+  // 모든 로봇 ?�치 ?�시
   if (robotPositions.value) {
     robotPositions.value.forEach((position, robotSeq) => {
-      // position이 존재하고 x, y값이 모두 있는 경우에만 처리
+      // position??존재?�고 x, y값이 모두 ?�는 경우?�만 처리
       if (position && 
           position.x != null && 
           position.y != null &&
@@ -181,7 +181,7 @@ const chartOption = computed(() => {
         if (!params || !params.data) return '';
         
         try {
-          // 로봇 시리즈인 경우
+          // 로봇 ?�리즈인 경우
           if (params.seriesIndex < robotSeries.length && robotPositions.value) {
             const robotSeqArray = Array.from(robotPositions.value.keys());
             if (!robotSeqArray || robotSeqArray.length === 0) return '';
@@ -193,7 +193,7 @@ const chartOption = computed(() => {
             return robot ? `로봇: ${robot.nickname || robot.manufactureName || robotSeq}` : '';
           }
           
-          // 노드 시리즈인 경우 - monitoring mode가 아닐 때만 좌표 표시
+          // ?�드 ?�리즈인 경우 - monitoring mode가 ?�닐 ?�만 좌표 ?�시
           if (!props.isMonitoringMode && params.componentSubType === 'scatter' && Array.isArray(params.data)) {
             const x = Number(params.data[0]);
             const y = Number(params.data[1]);
@@ -399,26 +399,26 @@ function updateChartSeries() {
   }
 }
 
-// SSE 설정
+// SSE ?�정
 function setupSSE() {
-  // 기존 연결들 정리
+  // 기존 ?�결???�리
   if (robotPositions.value) {
-    robotPositions.value.clear() // 기존 위치 정보도 초기화
+    robotPositions.value.clear() // 기존 ?�치 ?�보??초기??
   }
   if (eventSources) {
     eventSources.forEach(source => source.close())
     eventSources.clear()
   }
   
-  // seq가 1과 2인 로봇에 대해서만 SSE 설정
+  // seq가 1�?2??로봇???�?�서�?SSE ?�정
   const newEventSources = new Map()
   
   const activeRobots = robotsStore.robots
     .filter(robot => (robot.seq === 1 || robot.seq === 2) && robot?.IsActive === true);
   
   activeRobots.forEach(robot => {
-    console.log(`Setting up SSE for robot ${robot.seq}`) // 디버깅용
-    const url = `https://robocopbackendssafy.duckdns.org/api/v1/robots/sse/${robot.seq}/down-utm`
+    console.log(`Setting up SSE for robot ${robot.seq}`) // ?�버깅용
+    const url = `/api/v1/robots/sse/${robot.seq}/down-utm`
     const eventSource = new EventSource(url)
     
     let lastUpdate = 0
@@ -447,9 +447,9 @@ function setupSSE() {
     }
 
     eventSource.onerror = (error) => {
-      console.error(`SSE 연결 에러 (로봇 ${robot.seq}):`, error)
+      console.error(`SSE ?�결 ?�러 (로봇 ${robot.seq}):`, error)
       eventSource.close()
-      robotPositions.value.delete(robot.seq) // 에러 시 위치 정보도 삭제
+      robotPositions.value.delete(robot.seq) // ?�러 ???�치 ?�보????��
     }
 
     newEventSources.set(robot.seq, eventSource)
@@ -458,11 +458,11 @@ function setupSSE() {
   return newEventSources
 }
 
-// 로봇 제어 함수들
+// 로봇 ?�어 ?�수??
 async function handleNavigate() {
   try {
     await robotCommandsStore.navigateCommand(selectedNodes.value, currentRobotSeq.value)
-    // 명령 전송 후 선택된 노드 초기화
+    // 명령 ?�송 ???�택???�드 초기??
     selectedNodes.value = []
     updateChartSeries()
     emit('selectedNodesChange', selectedNodes.value)
@@ -474,7 +474,7 @@ async function handleNavigate() {
 async function handlePatrol() {
   try {
     await robotCommandsStore.patrolCommand(selectedNodes.value, currentRobotSeq.value)
-    // 명령 전송 후 선택된 노드 초기화
+    // 명령 ?�송 ???�택???�드 초기??
     selectedNodes.value = []
     updateChartSeries()
     emit('selectedNodesChange', selectedNodes.value)
@@ -496,9 +496,9 @@ async function handleResume() {
   await robotCommandsStore.resumeCommand(currentRobotSeq.value)
 }
 
-// 노드 클릭 핸들러
+// ?�드 ?�릭 ?�들??
 function handleNodeClick(params) {
-  // 모니터링 모드에서는 노드 클릭 비활성화
+  // 모니?�링 모드?�서???�드 ?�릭 비활?�화
   if (props.isMonitoringMode) return
   
   if (params.componentSubType === 'scatter') {
@@ -520,7 +520,7 @@ function handleNodeClick(params) {
   }
 }
 
-// 노드 제거 핸들러
+// ?�드 ?�거 ?�들??
 const handleNodeRemove = ({ node }) => {
   const index = selectedNodes.value.findIndex(n => 
     n.id[0].toFixed(2) === node.x && n.id[1].toFixed(2) === node.y
@@ -533,15 +533,15 @@ const handleNodeRemove = ({ node }) => {
   }
 }
 
-// 맵 데이터 fetch
+// �??�이??fetch
 async function fetchMapData() {
   try {
     loading.value = true
-    const response = await axios.get('https://robocopbackendssafy.duckdns.org/api/v1/map')
+    const response = await axios.get('/api/v1/map')
     mapData.value = { nodes: response.data.nodes, links: response.data.links }
     updateChartSeries()
   } catch (error) {
-    console.error('맵 데이터 로딩 실패:', error)
+    console.error('�??�이??로딩 ?�패:', error)
   } finally {
     loading.value = false
   }
@@ -550,7 +550,7 @@ async function fetchMapData() {
 // Watchers
 let eventSources = new Map()
 
-// robotsStore.robots가 변경될 때 SSE 재설정
+// robotsStore.robots가 변경될 ??SSE ?�설??
 watch(() => robotsStore.robots, (newRobots) => {
   console.log('Robots changed:', newRobots.map(r => r.seq))
   if (eventSources.size > 0) {
@@ -561,7 +561,7 @@ watch(() => robotsStore.robots, (newRobots) => {
   eventSources = setupSSE()
 }, { deep: true })
 
-// currentRobotSeq 변경 시에는 선택된 로봇만 업데이트
+// currentRobotSeq 변�??�에???�택??로봇�??�데?�트
 watch(() => currentRobotSeq.value, () => {
   updateChartSeries()
 })
@@ -607,16 +607,16 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
-  console.log('Cleaning up SSE connections...') // 디버깅용
+  console.log('Cleaning up SSE connections...') // ?�버깅용
   eventSources.forEach(source => {
     source.close()
-    console.log('Closed SSE connection') // 디버깅용
+    console.log('Closed SSE connection') // ?�버깅용
   })
   eventSources.clear()
-  robotPositions.value.clear() // 위치 정보도 정리
+  robotPositions.value.clear() // ?�치 ?�보???�리
 })
 
-// 외부로 노출할 메서드
+// ?��?�??�출??메서??
 defineExpose({
   handleNavigate,
   handlePatrol,

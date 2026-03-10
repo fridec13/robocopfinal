@@ -9,13 +9,13 @@
           :class="metric.borderClass"
         >
           <p class="text-gray-700 text-sm">{{ metric.title }}</p>
-          <p class="text-2xl font-bold">{{ metric.count }}대</p>
+          <p class="text-2xl font-bold">{{ metric.count }}?�</p>
         </div>
       </div>
 
       <!-- Filter Section -->
       <div class="filter-section my-5 flex flex-col md:flex-row gap-4 items-center">
-        <label for="robot-select" class="text-gray-700">로봇 선택:</label>
+        <label for="robot-select" class="text-gray-700">로봇 ?�택:</label>
         <select id="robot-select" v-model="selectedRobot" class="p-2 border rounded-lg">
           <option value="all">모든 로봇</option>
           <option v-for="robot in robots" :key="robot.seq" :value="robot.seq">
@@ -24,7 +24,7 @@
         </select>
 
         <!-- Date Range Picker -->
-        <label for="date-range" class="text-gray-700">기간 설정:</label>
+        <label for="date-range" class="text-gray-700">기간 ?�정:</label>
         <input type="date" v-model="startDate" class="p-2 border rounded-lg" /> ~ 
         <input type="date" v-model="endDate" class="p-2 border rounded-lg" />
       </div>
@@ -57,10 +57,10 @@ const startDate = ref('')
 const endDate = ref('')
 
 const metrics = ref([
-  { title: '활동 중인 로봇', count: 0, borderClass: 'border-blue-500' },
+  { title: '?�동 중인 로봇', count: 0, borderClass: 'border-blue-500' },
   { title: '충전 중인 로봇', count: 0, borderClass: 'border-green-500' },
-  { title: '고장 난 로봇', count: 0, borderClass: 'border-yellow-500' },
-  { title: '수리 중인 로봇', count: 0, borderClass: 'border-orange-500' },
+  { title: '고장 ??로봇', count: 0, borderClass: 'border-yellow-500' },
+  { title: '?�리 중인 로봇', count: 0, borderClass: 'border-orange-500' },
 ])
 
 const filteredRobots = computed(() => {
@@ -72,10 +72,10 @@ const filteredRobots = computed(() => {
 const updateMetrics = () => {
   const fr = filteredRobots.value
   metrics.value = [
-    { title: '활동 중인 로봇', count: fr.filter(r => r.isActive !== 'false').length, borderClass: 'border-blue-500' },
+    { title: '?�동 중인 로봇', count: fr.filter(r => r.isActive !== 'false').length, borderClass: 'border-blue-500' },
     { title: '충전 중인 로봇', count: fr.filter(r => r.status === 'charging').length, borderClass: 'border-green-500' },
-    { title: '고장 난 로봇', count: fr.filter(r => r.status === 'error').length, borderClass: 'border-yellow-500' },
-    { title: '휴식 중인 로봇', count: fr.filter(r => r.isActive === 'false').length, borderClass: 'border-orange-500' },
+    { title: '고장 ??로봇', count: fr.filter(r => r.status === 'error').length, borderClass: 'border-yellow-500' },
+    { title: '?�식 중인 로봇', count: fr.filter(r => r.isActive === 'false').length, borderClass: 'border-orange-500' },
   ]
 }
 

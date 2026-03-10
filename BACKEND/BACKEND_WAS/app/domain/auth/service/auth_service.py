@@ -72,9 +72,9 @@ class AuthService:
         refresh_token = security_service.create_refresh_token({"sub": username})
         
         return Token(
-            access_token=access_token,
-            refresh_token=refresh_token,
-            token_type="bearer"
+            accessToken=access_token,
+            refreshToken=refresh_token,
+            tokenType="bearer"
         )
 
     async def refresh_tokens(self, refresh_token: str) -> Token:

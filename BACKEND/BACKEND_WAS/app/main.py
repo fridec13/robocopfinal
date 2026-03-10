@@ -56,8 +56,6 @@ from dotenv import load_dotenv
 
 from app.common.middleware.socket_service import start_socket_server
 
-import threading
-
 from .domain.robot.service.robot_service import RobotService
 
 import time
@@ -69,10 +67,6 @@ import json
 import traceback
 
 from app.domain.ros_publisher.service.ros_bridge_connection import RosBridgeConnection
-
-import roslibpy
-
-from twisted.internet import reactor
 
 from fastapi.responses import StreamingResponse
 
@@ -266,27 +260,19 @@ async def startup_event():
 
         
 
-        # Start socket server
-
-        threading.Thread(target=start_socket_server, daemon=True).start()
-
+        # Start socket server (asyncio-based, no separate thread needed)
+        asyncio.create_task(start_socket_server())
         logger.info("Socket server started")
 
 
 
         # ROS Bridge connection attempt (non-critical, continues on failure)
-
         try:
-
-            _ = RosBridgeConnection()
-
+            ros_conn = RosBridgeConnection()
+            await ros_conn.connect()
             logger.info("ROS Bridge connection attempted")
-
         except Exception as e:
-
-
             logger.warning(f"ROS Bridge connection failed: {str(e)}")
-
             logger.warning("Server will continue running without ROS Bridge")
 
 

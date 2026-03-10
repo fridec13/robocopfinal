@@ -1,6 +1,6 @@
 <template>
   <div class="flex space-x-3 mb-1">
-    <!-- 이동/순찰 버튼 -->
+    <!-- ??/?? ?? -->
     <button
       class="flex items-center justify-center gap-1.5 w-24 h-12 text-base font-bold text-white rounded-lg transition-all duration-300 ease-in-out transform hover:scale-105 hover:shadow-lg active:scale-95 active:shadow-none"
       :class="{
@@ -12,20 +12,20 @@
       @click="selectedNodes.length === 1 ? $emit('navigate') : $emit('patrol')"
     >
       <i class="mdi" :class="selectedNodes.length >= 2 ? 'mdi-routes' : 'mdi-navigation'"></i>
-      {{ selectedNodes.length >= 2 ? '순찰' : '이동' }}
+      {{ selectedNodes.length >= 2 ? '??' : '??' }}
     </button>
 
-    <!-- 리셋 버튼 -->
-    <button 
+    <!-- ?? ?? -->
+    <button
       class="flex items-center justify-center gap-1.5 w-24 h-12 text-base font-bold text-white bg-red-500 rounded-lg transition-all duration-300 ease-in-out transform hover:scale-105 hover:shadow-lg hover:shadow-red-200 active:scale-95 active:shadow-none shadow-md"
       @click="handleReset"
     >
       <i class="mdi mdi-refresh"></i>
-      리셋
+      ??
     </button>
 
-    <!-- 일시정지/재가동 토글 버튼 -->
-    <button 
+    <!-- ????/?? ?? -->
+    <button
       class="flex items-center justify-center gap-1.5 w-24 h-12 text-base font-bold text-white rounded-lg transition-all duration-300 ease-in-out transform hover:scale-105 hover:shadow-lg active:scale-95 active:shadow-none shadow-md"
       :class="{
         'bg-green-500 hover:shadow-green-200': isPaused,
@@ -34,7 +34,7 @@
       @click="handlePauseToggle"
     >
       <i class="mdi" :class="isPaused ? 'mdi-play-circle' : 'mdi-pause-circle'"></i>
-      {{ isPaused ? '재가동' : '일시정지' }}
+      {{ isPaused ? '??' : '????' }}
     </button>
   </div>
 </template>
@@ -62,7 +62,7 @@ const isPaused = ref(false)
 
 function handleReset() {
   emits('reset')
-  toast.warning('로봇 작동을 중지합니다.', {
+  toast.warning('??? ?????', {
     position: "bottom-center",
     timeout: 3000,
     closeOnClick: true,
@@ -74,7 +74,7 @@ function handleReset() {
 function handlePauseToggle() {
   if (isPaused.value) {
     emits('resume')
-    toast.success('활동을 재개합니다.', {
+    toast.success('??? ?????', {
       position: "bottom-center",
       timeout: 3000,
       closeOnClick: true,
@@ -83,7 +83,7 @@ function handlePauseToggle() {
     })
   } else {
     emits('tempStop')
-    toast.info('로봇이 일시정지 되었습니다.', {
+    toast.info('??? ???????', {
       position: "bottom-center",
       timeout: 3000,
       closeOnClick: true,

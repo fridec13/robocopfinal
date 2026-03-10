@@ -10,29 +10,29 @@ class WebSocketService {
                 this.socket = new WebSocket(url);
                 
                 this.socket.onopen = () => {
-                    console.log('WebSocket 연결됨');
+                    console.log('WebSocket ?�결??);
                     resolve();
                 };
 
                 this.socket.onmessage = (event) => {
                     try {
                         const data = JSON.parse(event.data);
-                        console.log('받은 데이터:', data);  // 디버깅용
+                        console.log('받�? ?�이??', data);  // ?�버깅용
                         this.subscribers.forEach((callbacks, topic) => {
                             callbacks.forEach(callback => callback(data));
                         });
                     } catch (error) {
-                        console.error('메시지 처리 중 에러:', error);
+                        console.error('메시지 처리 �??�러:', error);
                     }
                 };
 
                 this.socket.onerror = (error) => {
-                    console.error('WebSocket 에러:', error);
+                    console.error('WebSocket ?�러:', error);
                     reject(error);
                 };
 
                 this.socket.onclose = () => {
-                    console.log('WebSocket 연결 종료');
+                    console.log('WebSocket ?�결 종료');
                     this.subscribers.clear();
                 };
 
@@ -43,9 +43,9 @@ class WebSocketService {
     }
 
     subscribe(topic, callback) {
-        console.log('구독 시도:', topic);  // 디버깅용
+        console.log('구독 ?�도:', topic);  // ?�버깅용
         if (!this.socket) {
-            throw new Error('웹소켓이 연결되지 않았습니다.');
+            throw new Error('?�소켓이 ?�결?��? ?�았?�니??');
         }
         
         if (!this.subscribers.has(topic)) {
@@ -73,6 +73,6 @@ class WebSocketService {
     }
 }
 
-// 싱글톤 인스턴스 생성 및 내보내기
+// ?��????�스?�스 ?�성 �??�보?�기
 const webSocketService = new WebSocketService();
 export default webSocketService; 

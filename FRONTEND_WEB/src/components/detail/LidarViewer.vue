@@ -1,14 +1,11 @@
 <template>
-  <div ref="container" class="w-full h-[400px] bg-black rounded-lg">
-    <!-- Three.js 렌더링 컨테이너 -->
-    <!-- 숨겨진 버튼 - 개발자 도구에서만 보임 -->
-    <button
-      class="absolute opacity-0 cursor-default"
-      style="top: -9999px; left: -9999px;"
-      @click="connectToLidarSSE"
+  <div ref="container" class="w-full h-[400px] bg-black rounded-lg relative">
+    <div
+      v-if="isLoading"
+      class="absolute inset-0 flex items-center justify-center text-white text-sm"
     >
-      라이다 실시간 데이터 연결
-    </button>
+      <span>라이다 데이터 로딩 중...</span>
+    </div>
   </div>
 </template>
 
@@ -28,19 +25,18 @@ const props = defineProps({
 const emit = defineEmits(['lidar-update']);
 
 const container = ref(null);
+const isLoading = ref(true);
 let scene, camera, renderer, controls;
 let pointCloud;
 let eventSource = null;
 let isSSEFailed = false;
-let isLiveDataEnabled = false;  // 실시간 데이터 활성화 상태
+let isLiveDataEnabled = false;
 
 // Three.js 초기화
 const initThree = () => {
-  // Scene 설정
   scene = new THREE.Scene();
   scene.background = new THREE.Color(0x000000);
 
-  // Camera 설정
   camera = new THREE.PerspectiveCamera(
     75,
     container.value.clientWidth / container.value.clientHeight,
@@ -50,94 +46,81 @@ const initThree = () => {
   camera.position.set(5, 5, 5);
   camera.lookAt(0, 0, 0);
 
-  // Renderer 설정
   renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setSize(container.value.clientWidth, container.value.clientHeight);
   container.value.appendChild(renderer.domElement);
 
-  // Controls 설정
   controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
   controls.dampingFactor = 0.05;
 
-  // 좌표축 헬퍼 추가
+  // 좌표축 헬퍼
   const axesHelper = new THREE.AxesHelper(5);
   scene.add(axesHelper);
 
-  // 초기 포인트 클라우드 생성
+  // 초기 포인트클라우드
   const geometry = new THREE.BufferGeometry();
-  const material = new THREE.PointsMaterial({
-    size: 0.05,
-    vertexColors: true
-  });
+  const material = new THREE.PointsMaterial({ size: 0.05, vertexColors: true });
   pointCloud = new THREE.Points(geometry, material);
   scene.add(pointCloud);
 
-  // 애니메이션 루프 시작
   animate();
 };
 
-// 포인트 클라우드 업데이트
+// 포인트클라우드 업데이트
 const updatePointCloud = (pcdData) => {
   if (!pcdData || !pcdData.positions || pcdData.positions.length === 0) return;
 
   const positions = new Float32Array(pcdData.positions);
   const colors = new Float32Array(pcdData.positions.length);
 
-  // 강도값을 기반으로 색상 설정
   for (let i = 0; i < pcdData.intensities.length; i++) {
-    const intensity = pcdData.intensities[i];
     const colorIndex = i * 3;
-    colors[colorIndex] = 1.0;     // R (흰색)
-    colors[colorIndex + 1] = 1.0; // G (흰색)
-    colors[colorIndex + 2] = 1.0; // B (흰색)
+    colors[colorIndex] = 1.0;
+    colors[colorIndex + 1] = 1.0;
+    colors[colorIndex + 2] = 1.0;
   }
 
   pointCloud.geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
   pointCloud.geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
   pointCloud.geometry.computeBoundingSphere();
+  isLoading.value = false;
 };
 
 // 정적 PCD 파일 로드
 const loadStaticPCD = () => {
   const loader = new PCDLoader();
-  const pcdUrl = 'https://robocopbackendssafy.duckdns.org/media/persons_image/map.pcd';
-  
   loader.load(
-    pcdUrl,
+    '/media/persons_image/map.pcd',
     (points) => {
-      if (pointCloud) {
-        scene.remove(pointCloud);
-      }
+      if (pointCloud) scene.remove(pointCloud);
       pointCloud = points;
-      scene.add(pointCloud);
-      
-      // 포인트 크기 조정
       pointCloud.material.size = 0.05;
-      
-      // 뷰 중앙으로 조정
+      scene.add(pointCloud);
+
+      // 중앙 정렬
       const box = new THREE.Box3().setFromObject(pointCloud);
       const center = box.getCenter(new THREE.Vector3());
       pointCloud.position.sub(center);
+      isLoading.value = false;
     },
     (xhr) => {
-      console.log((xhr.loaded / xhr.total * 100) + '% loaded');
+      console.log((xhr.loaded / xhr.total * 100).toFixed(1) + '% 로드');
     },
     (error) => {
-      console.error('PCD 파일 로드 실패:', error);
+      console.warn('PCD 파일 없음, 빈 시작:', error);
+      isLoading.value = false;
     }
   );
 };
 
-// SSE 연결 함수를 별도로 분리
+// SSE 라이브 데이터 연결
 const connectToLidarSSE = () => {
-  if (isLiveDataEnabled) return;  // 이미 연결된 경우 중복 연결 방지
-  
+  if (isLiveDataEnabled) return;
   isLiveDataEnabled = true;
-  eventSource = new EventSource(
-    `https://robocopbackendssafy.duckdns.org/api/v1/lidar/sse/${props.robotSeq}`
-  );
-  
+
+  eventSource = new EventSource(`/api/v1/lidar/sse/${props.robotSeq}`);
+
   eventSource.onmessage = (event) => {
     const data = JSON.parse(event.data);
     if (data.pcd) {
@@ -145,11 +128,13 @@ const connectToLidarSSE = () => {
       emit('lidar-update', data.pcd.points, data.timestamp);
     }
   };
-  
+
   eventSource.onerror = (error) => {
-    console.error('라이다 SSE 연결 에러:', error);
+    console.warn('라이다 SSE 연결 오류 - 정적 PCD로 대체:', error);
     if (!isSSEFailed) {
       isSSEFailed = true;
+      eventSource.close();
+      isLiveDataEnabled = false;
       loadStaticPCD();
     }
   };
@@ -162,45 +147,42 @@ const animate = () => {
   renderer.render(scene, camera);
 };
 
-// 윈도우 리사이즈 핸들러
+// 리사이즈 핸들러
 const handleResize = () => {
   if (!container.value) return;
-  
   const width = container.value.clientWidth;
   const height = container.value.clientHeight;
-
   camera.aspect = width / height;
   camera.updateProjectionMatrix();
   renderer.setSize(width, height);
 };
 
-// 컴포넌트 마운트 시
 onMounted(() => {
   initThree();
-  loadStaticPCD();  // 정적 PCD 파일만 로드
+  // SSE 연결 시도, 실패 시 정적 PCD 로드
+  connectToLidarSSE();
   window.addEventListener('resize', handleResize);
 });
 
-// 컴포넌트 언마운트 시
 onUnmounted(() => {
   if (eventSource) {
     eventSource.close();
-    isLiveDataEnabled = false;  // 상태 초기화
+    isLiveDataEnabled = false;
   }
   window.removeEventListener('resize', handleResize);
-  if (renderer) {
-    renderer.dispose();
-  }
-  if (container.value) {
-    container.value.innerHTML = '';
-  }
+  if (renderer) renderer.dispose();
+  if (container.value) container.value.innerHTML = '';
   isSSEFailed = false;
 });
 
-// robotSeq가 변경될 때
-watch(() => props.robotSeq, (newSeq) => {
+watch(() => props.robotSeq, () => {
   isSSEFailed = false;
-  loadStaticPCD();  // 정적 PCD 파일만 로드
+  isLiveDataEnabled = false;
+  if (eventSource) {
+    eventSource.close();
+    eventSource = null;
+  }
+  connectToLidarSSE();
 });
 </script>
 
@@ -210,4 +192,4 @@ watch(() => props.robotSeq, (newSeq) => {
   width: 100%;
   height: 400px;
 }
-</style> 
+</style>

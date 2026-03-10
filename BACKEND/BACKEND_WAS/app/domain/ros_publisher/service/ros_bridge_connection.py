@@ -1,139 +1,185 @@
-import roslibpy
 import asyncio
+import json
 import logging
-import time
-from typing import Optional
+import uuid
+from typing import Callable, Dict, List, Optional
 
+import websockets
 
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-from redis import Redis
-from ....common.config.manager import get_settings
-
-settings = get_settings()
 
 class RosBridgeConnection:
-    
-    # _instance = None
-    # client = None
-    
-    # HOST = "127.0.0.1"
-    # PORT = 10000
-    # MAX_RETRIES = 3
-    # RETRY_DELAY = 2
+    """
+    Pure asyncio WebSocket client for rosbridge v2 protocol.
+    Replaces roslibpy (Twisted) to eliminate CPU spin in the asyncio event loop.
+    """
+    _instances: Dict[int, 'RosBridgeConnection'] = {}
 
-    # def __new__(cls):
-    #     if cls._instance is None:
-    #         cls._instance = super(RosBridgeConnection, cls).__new__(cls)
-    #         cls._instance.connect()  # 동기적으로 연결
-    #     return cls._instance
-    
-    _instances = {}
-    
-    def __new__(cls, port=10000):
+    def __new__(cls, port: int = 10000):
         if port not in cls._instances:
-            instance = super(RosBridgeConnection, cls).__new__(cls)
-            instance.HOST = settings.ros2.ROS_BRIDGE_HOST
-            instance.PORT = port
-            instance.MAX_RETRIES = 3
-            instance.RETRY_DELAY = 2
-            instance.client = None
-            instance.connected_clients = set()
-            instance.redis_client = Redis(
-                host=settings.REDIS_HOST,
-                port=settings.REDIS_PORT,
-                decode_responses=True
-            )
+            instance = super().__new__(cls)
+            instance._initialized = False
             cls._instances[port] = instance
-            instance.connect()
         return cls._instances[port]
-    
-    def register_client(self, client_id: str):
-        """새로운 클라이언트를 등록합니다."""
-        try:
-            self.connected_clients.add(client_id)
-            self.redis_client.sadd(f'rosbridge_clients:{self.PORT}', client_id)
-            logger.info(f"ROS Bridge 클라이언트 등록 (Port {self.PORT}): {client_id}")
-        except Exception as e:
-            logger.error(f"클라이언트 등록 실패: {str(e)}")
-            raise
-        
-    def unregister_client(self, client_id: str):
-        """클라이언트를 제거합니다."""
-        try:
-            # discard()는 요소가 없어도 에러를 발생시키지 않음
-            self.connected_clients.discard(client_id)
-            self.redis_client.srem(f'rosbridge_clients:{self.PORT}', client_id)
-            
-            # 연결된 클라이언트가 없을 때 연결 종료
-            if not self.connected_clients:
-                if self.client and self.client.is_connected:
-                    try:
-                        self.client.close()  # terminate() 대신 close() 사용
-                    except:
-                        pass
-                    finally:
-                        self.client = None
-                
-                if self.PORT in self._instances:
-                    del self._instances[self.PORT]
-                
-            logger.info(f"ROS Bridge 클라이언트 제거 (Port {self.PORT}): {client_id}")
-        except Exception as e:
-            logger.error(f"클라이언트 제거 실패: {str(e)}")
 
-    def ensure_connected(self):
-        """연결이 되어 있는지 확인하고, 필요 시 재연결합니다."""
-        if not self.client or not self.client.is_connected:
-            logger.warning("ROS Bridge 연결이 끊어졌습니다. 재연결을 시도합니다.")
-            self.connect()
+    def __init__(self, port: int = 10000):
+        if self._initialized:
+            return
+        self._initialized = True
 
-    def publish(self, topic_name: str, msg_type: str, message: dict):
-        """토픽에 메시지를 발행합니다."""
+        from app.common.config.manager import get_settings
+        settings = get_settings()
+
+        self.host: str = settings.ros2.ROS_BRIDGE_HOST
+        self.port: int = port
+        self.url: str = f"ws://{self.host}:{self.port}"
+
+        self._ws = None
+        self._connected: bool = False
+        self._subscribers: Dict[str, List[Callable]] = {}
+        self._pending_services: Dict[str, asyncio.Future] = {}
+        self._receive_task: Optional[asyncio.Task] = None
+        self.connected_clients: set = set()
+
+    @property
+    def is_connected(self) -> bool:
+        return self._connected and self._ws is not None
+
+    async def connect(self) -> bool:
         try:
-            if not self.client or not self.client.is_connected:
-                self.ensure_connected()
-            
-            topic = roslibpy.Topic(self.client, topic_name, msg_type)
-            topic.publish(message)
-            logger.info(f"Published to {topic_name}: {message}")
+            logger.info(f"ROS Bridge 연결 시도 중... ({self.url})")
+            self._ws = await websockets.connect(
+                self.url,
+                ping_interval=20,
+                ping_timeout=10,
+            )
+            self._connected = True
+            self._receive_task = asyncio.create_task(self._receive_loop())
+            logger.info(f"ROS Bridge connected: {self.url}")
             return True
         except Exception as e:
-            logger.error(f"Failed to publish to {topic_name}: {str(e)}")
+            logger.error(f"ROS Bridge connection failed: {e}")
+            self._connected = False
             return False
 
-    def connect(self):
+    async def _receive_loop(self):
         try:
-            if self.client and self.client.is_connected:
-                return
-                
-            logger.info(f"ROS Bridge 연결 시도 중... (Port: {self.PORT})")
-            
-            # reactor 상태 확인 및 초기화
-#            from twisted.internet import reactor
-#            if not reactor.running:
-#                self.client = roslibpy.Ros(host=self.HOST, port=self.PORT)
-#                self.client.run()
-#            else:
-#                self.client = roslibpy.Ros(host=self.HOST, port=self.PORT)
-                #self.client.run(run_event_loop=False)
-#                self.client.run()
+            async for raw_msg in self._ws:
+                try:
+                    msg = json.loads(raw_msg)
+                    op = msg.get('op')
 
-            self.client = roslibpy.Ros(host=self.HOST, port=self.PORT)
-            self.client.run()
+                    if op == 'publish':
+                        topic = msg.get('topic')
+                        if topic in self._subscribers:
+                            for cb in list(self._subscribers[topic]):
+                                try:
+                                    if asyncio.iscoroutinefunction(cb):
+                                        asyncio.create_task(cb(msg.get('msg', {})))
+                                    else:
+                                        cb(msg.get('msg', {}))
+                                except Exception as e:
+                                    logger.error(f"Subscriber callback error on {topic}: {e}")
 
+                    elif op == 'service_response':
+                        sid = msg.get('id')
+                        if sid in self._pending_services:
+                            future = self._pending_services.pop(sid)
+                            if not future.done():
+                                future.set_result(msg.get('values', {}))
 
-            connection_timeout = 30
-            start_time = time.time()
-            while not self.client.is_connected and (time.time() - start_time) < connection_timeout:
-                time.sleep(0.1)
-                
-            if not self.client.is_connected:
-                raise Exception("연결 시간 초과")
-                
+                except Exception as e:
+                    logger.error(f"Message processing error: {e}")
+
         except Exception as e:
-            logger.error(f"ROS Bridge 연결 실패: {str(e)}")
-            self.client = None
+            logger.warning(f"ROS Bridge receive loop ended: {e}")
+            self._connected = False
 
+    async def publish(self, topic: str, msg_type: str, message: dict) -> bool:
+        if not self.is_connected:
+            logger.warning("ROS Bridge not connected, skipping publish")
+            return False
+        try:
+            payload = json.dumps({"op": "publish", "topic": topic, "msg": message})
+            await self._ws.send(payload)
+            return True
+        except Exception as e:
+            logger.error(f"Publish failed on {topic}: {e}")
+            self._connected = False
+            return False
 
+    async def subscribe(self, topic: str, msg_type: str, callback: Callable) -> None:
+        if topic not in self._subscribers:
+            self._subscribers[topic] = []
+            if self.is_connected:
+                payload = json.dumps({"op": "subscribe", "topic": topic, "type": msg_type})
+                await self._ws.send(payload)
+        if callback not in self._subscribers[topic]:
+            self._subscribers[topic].append(callback)
+
+    async def unsubscribe(self, topic: str, callback: Callable = None) -> None:
+        if topic not in self._subscribers:
+            return
+        if callback:
+            try:
+                self._subscribers[topic].remove(callback)
+            except ValueError:
+                pass
+        else:
+            self._subscribers[topic].clear()
+
+        if not self._subscribers[topic]:
+            del self._subscribers[topic]
+            if self.is_connected:
+                payload = json.dumps({"op": "unsubscribe", "topic": topic})
+                await self._ws.send(payload)
+
+    async def call_service(self, service: str, args: dict = None, timeout: float = 10.0) -> dict:
+        if not self.is_connected:
+            raise ConnectionError("ROS Bridge not connected")
+
+        sid = f"service:{service}:{uuid.uuid4().hex[:8]}"
+        loop = asyncio.get_event_loop()
+        future = loop.create_future()
+        self._pending_services[sid] = future
+
+        try:
+            payload = json.dumps({
+                "op": "call_service",
+                "id": sid,
+                "service": service,
+                "args": args or {}
+            })
+            await self._ws.send(payload)
+            return await asyncio.wait_for(future, timeout=timeout)
+        except asyncio.TimeoutError:
+            self._pending_services.pop(sid, None)
+            raise TimeoutError(f"Service call timed out: {service}")
+        except Exception as e:
+            self._pending_services.pop(sid, None)
+            raise
+
+    def register_client(self, client_id: str):
+        self.connected_clients.add(client_id)
+
+    def unregister_client(self, client_id: str):
+        self.connected_clients.discard(client_id)
+
+    def ensure_connected(self):
+        """Compatibility shim: schedules async connect if not connected."""
+        if not self.is_connected:
+            try:
+                loop = asyncio.get_event_loop()
+                if loop.is_running():
+                    asyncio.create_task(self.connect())
+            except Exception:
+                pass
+
+    async def close(self):
+        self._connected = False
+        if self._receive_task:
+            self._receive_task.cancel()
+        if self._ws:
+            await self._ws.close()
+        self.__class__._instances.pop(self.port, None)

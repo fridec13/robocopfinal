@@ -30,8 +30,9 @@ class StorageSettings(BaseSettings):
     
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.IMAGE_STORAGE_PATH = f"{self.MEDIA_SERVER_URL}/image"
-        self.VIDEO_STORAGE_PATH = f"{self.MEDIA_SERVER_URL}/video"
+        # URL이 아닌 로컬 경로로 설정
+        self.IMAGE_STORAGE_PATH = os.path.join(self.BASE_STORAGE_PATH, "images")
+        self.VIDEO_STORAGE_PATH = os.path.join(self.BASE_STORAGE_PATH, "videos")
         
         self._create_directories()
     
@@ -42,7 +43,8 @@ class StorageSettings(BaseSettings):
             self.VIDEO_STORAGE_PATH,
             self.FRAME_STORAGE_PATH,
             self.IMAGE_STORAGE_PATH,
-            self.LOG_STORAGE_PATH
+            self.LOG_STORAGE_PATH,
+            self.MEDIA_ROOT,
         ]
         for directory in directories:
             os.makedirs(directory, exist_ok=True)

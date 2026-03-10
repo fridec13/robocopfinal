@@ -26,7 +26,7 @@ RUN chmod +x robot_publisher.py cmd_vel_subscriber.py
 
 # ROS2 환경 설정
 COPY ros_entrypoint.sh /
-RUN chmod +x /ros_entrypoint.sh
+RUN sed -i 's/\r//' /ros_entrypoint.sh && chmod +x /ros_entrypoint.sh
 
 # 환경변수 설정
 ENV RMW_IMPLEMENTATION=rmw_fastrtps_cpp

@@ -34,7 +34,7 @@ class RosBridgeConnection:
     def __new__(cls, port=10000):
         if port not in cls._instances:
             instance = super(RosBridgeConnection, cls).__new__(cls)
-            instance.HOST = "127.0.0.1"
+            instance.HOST = settings.ros2.ROS_BRIDGE_HOST
             instance.PORT = port
             instance.MAX_RETRIES = 3
             instance.RETRY_DELAY = 2

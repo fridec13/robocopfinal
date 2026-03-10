@@ -3,6 +3,7 @@ from .base import BaseAppSettings
 from .database import DatabaseSettings
 from .security import SecuritySettings
 from .storage import StorageSettings
+from .settings import ROS2Settings
 from typing import List
 from pydantic_settings import BaseSettings
 
@@ -59,7 +60,7 @@ class Settings:
         self.database = DatabaseSettings()
         self.security = SecuritySettings()
         self.storage = StorageSettings()
-        self.ros2 = self.ROS2()
+        self.ros2 = ROS2Settings()
 
 @lru_cache()
 def get_settings() -> Settings:

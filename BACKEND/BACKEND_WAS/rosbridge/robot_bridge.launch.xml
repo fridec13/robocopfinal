@@ -1,7 +1,7 @@
 <launch>
   <!-- Main ROS Bridge for publishing topics (10000) -->
   <node pkg="rosbridge_server" exec="rosbridge_websocket" name="rosbridge_dev">
-    <param name="port" value="9090"/>
+    <param name="port" value="10000"/>
     <param name="address" value="0.0.0.0"/>
   </node>
   

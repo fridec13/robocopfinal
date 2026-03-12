@@ -83,6 +83,7 @@
 
 <script setup>
 import { computed, onMounted, watch } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { useRobotsStore } from '@/stores/robots'
 
 const props = defineProps({
@@ -90,6 +91,8 @@ const props = defineProps({
 })
 defineEmits(['toggle-left-sidebar'])
 
+const router = useRouter()
+const route = useRoute()
 const robotsStore = useRobotsStore()
 const robots = computed(() => {
   return robotsStore.displayRobots.slice().sort((a, b) => {
@@ -118,11 +121,11 @@ watch(robots, () => {
 
 function toggleRobotSelection(seq) {
   const parsedSeq = typeof seq === 'string' ? parseInt(seq, 10) : seq
-  if (robotsStore.selectedRobot === parsedSeq) {
-    robotsStore.selectedRobot = 0
-  } else {
-    robotsStore.selectedRobot = parsedSeq
-  }
+  robotsStore.selectedRobot = parsedSeq
   robotsStore.handleRobotSelection()
+  // 이미 해당 로봇 상세 페이지에 있지 않으면 이동
+  if (route.path !== `/${parsedSeq}`) {
+    router.push(`/${parsedSeq}`)
+  }
 }
 </script>

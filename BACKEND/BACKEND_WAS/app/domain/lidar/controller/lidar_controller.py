@@ -1,9 +1,14 @@
-from fastapi import APIRouter, WebSocket, HTTPException
+from fastapi import APIRouter, WebSocket, HTTPException, Request
+from fastapi.responses import StreamingResponse
 from ..service.lidar_service import LidarService
 from ..models.lidar_models import LidarConfig, LidarStatus
 from ....common.models.responses import BaseResponse
 from ....common.config.manager import get_settings
+from ....domain.ros_publisher.service.ros_bridge_connection import RosBridgeConnection
 import asyncio
+import json
+import math
+import time
 import logging
 
 logger = logging.getLogger(__name__)
@@ -21,6 +26,80 @@ DEFAULT_LIDAR_CONFIG = LidarConfig(
     update_interval=0.1,
     max_points=4500
 )
+
+@router.get("/sse/{seq}")
+async def lidar_scan_sse(seq: int, request: Request):
+    """LaserScan 토픽을 SSE로 스트리밍 (seq=1→ssafy, seq=2→samsung)"""
+    ns = "samsung" if seq == 2 else "ssafy"
+    topic = f"/{ns}/scan"
+    topic_type = "sensor_msgs/LaserScan"
+
+    queue: asyncio.Queue = asyncio.Queue(maxsize=2)
+
+    def on_scan(message: dict):
+        try:
+            ranges = message.get("ranges", [])
+            angle_min = float(message.get("angle_min", 0.0))
+            angle_increment = float(message.get("angle_increment", 0.0))
+            range_min = float(message.get("range_min", 0.1))
+            range_max = float(message.get("range_max", 10.0))
+            intensities = message.get("intensities", [])
+
+            positions = []
+            out_intensities = []
+
+            for i, r in enumerate(ranges):
+                if math.isnan(r) or math.isinf(r):
+                    continue
+                if r < range_min or r > range_max:
+                    continue
+                angle = angle_min + i * angle_increment
+                positions.extend([
+                    r * math.cos(angle),   # x
+                    r * math.sin(angle),   # y
+                    0.0                    # z (2D scan)
+                ])
+                out_intensities.append(float(intensities[i]) if i < len(intensities) else 1.0)
+
+            try:
+                queue.put_nowait({"positions": positions, "intensities": out_intensities})
+            except asyncio.QueueFull:
+                try:
+                    queue.get_nowait()
+                    queue.put_nowait({"positions": positions, "intensities": out_intensities})
+                except Exception:
+                    pass
+        except Exception as e:
+            logger.warning(f"[lidar] scan parse error (seq={seq}): {e}")
+
+    bridge = RosBridgeConnection(port=10000)
+    client_id = f"lidar_sse_{seq}_{id(queue)}"
+    bridge.register_client(client_id)
+    await bridge.subscribe(topic, topic_type, on_scan)
+    logger.info(f"[lidar] SSE started: seq={seq}, topic={topic}")
+
+    async def event_generator():
+        try:
+            while True:
+                if await request.is_disconnected():
+                    break
+                try:
+                    pcd = await asyncio.wait_for(queue.get(), timeout=2.0)
+                    payload = json.dumps({"pcd": pcd, "timestamp": time.time()})
+                    yield f"data: {payload}\n\n"
+                except asyncio.TimeoutError:
+                    yield ": keepalive\n\n"
+        finally:
+            await bridge.unsubscribe(topic, on_scan)
+            bridge.unregister_client(client_id)
+            logger.info(f"[lidar] SSE ended: seq={seq}, topic={topic}")
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
+
 
 @router.websocket("/ws")
 async def lidar_websocket(websocket: WebSocket):

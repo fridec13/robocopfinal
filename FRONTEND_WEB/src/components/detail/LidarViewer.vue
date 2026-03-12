@@ -116,6 +116,10 @@ const loadStaticPCD = () => {
 
 // SSE 라이브 데이터 연결
 const connectToLidarSSE = () => {
+  if (!props.robotSeq) {
+    loadStaticPCD();
+    return;
+  }
   if (isLiveDataEnabled) return;
   isLiveDataEnabled = true;
 
@@ -175,7 +179,8 @@ onUnmounted(() => {
   isSSEFailed = false;
 });
 
-watch(() => props.robotSeq, () => {
+watch(() => props.robotSeq, (newSeq) => {
+  if (!newSeq) return;
   isSSEFailed = false;
   isLiveDataEnabled = false;
   if (eventSource) {

@@ -419,8 +419,11 @@ private:
             if (reached) {
                 RCLCPP_INFO(this->get_logger(),
                     "경로에 도달했습니다. Waiting service 호출하여 대기모드로 전환.");
-                callTempStop();  // temp stop service 호출
-                //stop_robot();
+                // 다음 명령을 받을 때까지 새 경로를 기다리도록 플래그 및 큐 초기화
+                global_path_received_ = false;
+                clearQueue(path_queue_);
+                clearQueue(save_path_queue_);
+                callTempStop();
                 callWaitingService();
                 return;
             }

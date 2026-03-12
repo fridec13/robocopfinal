@@ -178,6 +178,5 @@ const handleStartStop = async (robot) => {
 const goToDetailPage = (robotSeq) => router.push(`/${robotSeq}`);
 
 const isActive = (robot) =>
-  /^robot_\d+$/.test(robot.manufactureName) &&
-  (robot.isActive === true || robot.IsActive === true);
+  robot.isActive === true || robot.IsActive === true;
 </script>

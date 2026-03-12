@@ -36,19 +36,31 @@ async def lidar_scan_sse(seq: int, request: Request):
 
     queue: asyncio.Queue = asyncio.Queue(maxsize=2)
 
+    _debug_logged = [False]
+
     def on_scan(message: dict):
         try:
-            ranges = message.get("ranges", [])
-            angle_min = float(message.get("angle_min", 0.0))
-            angle_increment = float(message.get("angle_increment", 0.0))
-            range_min = float(message.get("range_min", 0.1))
-            range_max = float(message.get("range_max", 10.0))
+            if not _debug_logged[0]:
+                sample_ranges = message.get("ranges", [])[:5]
+                logger.info(f"[lidar] first scan msg keys={list(message.keys())}, angle_min={message.get('angle_min')}, angle_increment={message.get('angle_increment')}, ranges[:5]={sample_ranges}")
+                _debug_logged[0] = True
+            ranges = message.get("ranges") or []
+            angle_min = float(message.get("angle_min") or 0.0)
+            angle_increment = float(message.get("angle_increment") or 0.0)
+            range_min = float(message.get("range_min") or 0.1)
+            range_max = float(message.get("range_max") or 10.0)
             intensities = message.get("intensities", [])
 
             positions = []
             out_intensities = []
 
             for i, r in enumerate(ranges):
+                if r is None:
+                    continue
+                try:
+                    r = float(r)
+                except (TypeError, ValueError):
+                    continue
                 if math.isnan(r) or math.isinf(r):
                     continue
                 if r < range_min or r > range_max:

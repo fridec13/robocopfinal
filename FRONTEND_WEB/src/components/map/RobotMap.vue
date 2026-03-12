@@ -8,6 +8,7 @@
           ref="chartRef"
           autoresize
           @click="handleNodeClick"
+          @finished="updateBgImage"
         />
       </div>
 
@@ -52,6 +53,16 @@ const robotsStore = useRobotsStore()
 const robotCommandsStore = useRobotCommandsStore()
 const emit = defineEmits(['selectedNodesChange'])
 
+// map.png UTM extent (c101.world GPS origin + map.yaml 계산)
+// c101 GPS origin: lat=35.1595, lon=126.8526 → UTM(304411.646, 3892842.473)
+// map.yaml: origin=(-30,-30), resolution=0.05 m/px, size=1200×1200px → 60m×60m
+const MAP_UTM = {
+  xMin: 304381.65,
+  xMax: 304441.65,
+  yMin: 3892812.47,
+  yMax: 3892872.47,
+}
+
 // Refs ???
 const containerRef = ref(null)
 const chartRef = ref(null)
@@ -61,6 +72,7 @@ const selectedNodes = ref([])
 const imageWidth = ref(800)
 const imageHeight = ref(500)
 const robotPositions = ref(new Map()) // ??? ????????????????Map
+let _lastBgPos = null
 
 // Props ???
 const props = defineProps({
@@ -154,20 +166,7 @@ const chartOption = computed(() => {
       bottom: '5%',
       containLabel: true
     },
-    graphic: [
-      {
-        type: 'image',
-        id: 'backgroundImage',
-        z: -10,
-        left: 'center',
-        top: 'middle',
-        style: {
-          image: '/images/row-map.png',
-          width: imageWidth.value * 1.01,
-          height: imageHeight.value * 1.1
-        }
-      }
-    ],
+    graphic: [],
     tooltip: {
       show: true,
       trigger: 'item',
@@ -211,7 +210,8 @@ const chartOption = computed(() => {
     },
     xAxis: {
       type: 'value',
-      scale: true,
+      min: MAP_UTM.xMin,
+      max: MAP_UTM.xMax,
       axisLine: { show: false },
       splitLine: { show: false },
       axisTick: { show: false },
@@ -219,7 +219,8 @@ const chartOption = computed(() => {
     },
     yAxis: {
       type: 'value',
-      scale: true,
+      min: MAP_UTM.yMin,
+      max: MAP_UTM.yMax,
       axisLine: { show: false },
       splitLine: { show: false },
       axisTick: { show: false },
@@ -533,6 +534,48 @@ const handleNodeRemove = ({ node }) => {
   }
 }
 
+// 배경 이미지를 UTM 좌표계에 정확히 배치 (convertToPixel 사용)
+function updateBgImage() {
+  if (!chartRef.value) return
+  try {
+    const tl = chartRef.value.convertToPixel(
+      { xAxisIndex: 0, yAxisIndex: 0 },
+      [MAP_UTM.xMin, MAP_UTM.yMax]   // 좌상단 (x최소, y최대)
+    )
+    const br = chartRef.value.convertToPixel(
+      { xAxisIndex: 0, yAxisIndex: 0 },
+      [MAP_UTM.xMax, MAP_UTM.yMin]   // 우하단 (x최대, y최소)
+    )
+    if (!tl || !br) return
+    const w = br[0] - tl[0]
+    const h = br[1] - tl[1]
+    if (w <= 0 || h <= 0) return
+
+    // 위치가 실질적으로 바뀌었을 때만 setOption (무한루프 방지)
+    const pos = `${tl[0].toFixed(0)},${tl[1].toFixed(0)},${w.toFixed(0)},${h.toFixed(0)}`
+    if (pos === _lastBgPos) return
+    _lastBgPos = pos
+
+    chartRef.value.setOption({
+      graphic: [{
+        type: 'image',
+        id: 'bgMapFloor',
+        z: -10,
+        x: tl[0],
+        y: tl[1],
+        style: {
+          image: '/images/map-floor.png',
+          width: w,
+          height: h,
+          opacity: 0.75
+        }
+      }]
+    })
+  } catch (e) {
+    console.warn('[RobotMap] bg image positioning error:', e)
+  }
+}
+
 // ???????fetch
 async function fetchMapData() {
   try {
@@ -591,8 +634,9 @@ onMounted(() => {
       const { width, height } = entry.contentRect
       imageWidth.value = width * 0.9
       imageHeight.value = height * 0.95
-      
+
       if (chartRef.value) {
+        _lastBgPos = null   // 리사이즈 후 이미지 재배치 강제
         chartRef.value.resize()
       }
     }

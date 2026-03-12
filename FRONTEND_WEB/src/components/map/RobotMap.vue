@@ -19,7 +19,7 @@
 
       <div v-if="loading" class="absolute inset-0 flex flex-col items-center justify-center bg-white bg-opacity-90">
         <div class="w-10 h-10 border-4 border-gray-300 border-t-blue-500 rounded-full animate-spin"></div>
-        <span class="mt-3 text-gray-700">ë§??°ì´?°ë? ë¶ˆëŸ¬?¤ëŠ” ì¤?..</span>
+        <span class="mt-3 text-gray-700">????????? ????? ??..</span>
       </div>
     </div>
   </div>
@@ -47,12 +47,12 @@ use([
   LinesChart
 ])
 
-// Store ì´ˆê¸°??
+// Store ????
 const robotsStore = useRobotsStore()
 const robotCommandsStore = useRobotCommandsStore()
 const emit = defineEmits(['selectedNodesChange'])
 
-// Refs ?•ì˜
+// Refs ???
 const containerRef = ref(null)
 const chartRef = ref(null)
 const loading = ref(true)
@@ -60,9 +60,9 @@ const mapData = ref({ nodes: [], links: [] })
 const selectedNodes = ref([])
 const imageWidth = ref(800)
 const imageHeight = ref(500)
-const robotPositions = ref(new Map()) // ?¬ëŸ¬ ë¡œë´‡???„ì¹˜ë¥??€?¥í•˜??Map
+const robotPositions = ref(new Map()) // ??? ????????????????Map
 
-// Props ?•ì˜
+// Props ???
 const props = defineProps({
   showSelectedNodes: {
     type: Boolean,
@@ -92,7 +92,7 @@ const robotColors = {
   4: '#ff0000'
 }
 
-// Computed ?ì„±
+// Computed ???
 const currentRobotSeq = computed(() => {
   if (props.robot) {
     return props.robot.seq
@@ -115,14 +115,14 @@ const selectedNodesInfo = computed(() => {
   }))
 })
 
-// ì°¨íŠ¸ ?µì…˜ computed
+// ?? ??? computed
 const chartOption = computed(() => {
   const robotSeries = []
   
-  // ëª¨ë“  ë¡œë´‡ ?„ì¹˜ ?œì‹œ
+  // ?? ?? ??? ???
   if (robotPositions.value) {
     robotPositions.value.forEach((position, robotSeq) => {
-      // position??ì¡´ì¬?˜ê³  x, yê°’ì´ ëª¨ë‘ ?ˆëŠ” ê²½ìš°?ë§Œ ì²˜ë¦¬
+      // position??????? x, y?? ?? ??? ????? ??
       if (position && 
           position.x != null && 
           position.y != null &&
@@ -181,7 +181,7 @@ const chartOption = computed(() => {
         if (!params || !params.data) return '';
         
         try {
-          // ë¡œë´‡ ?œë¦¬ì¦ˆì¸ ê²½ìš°
+          // ?? ????? ??
           if (params.seriesIndex < robotSeries.length && robotPositions.value) {
             const robotSeqArray = Array.from(robotPositions.value.keys());
             if (!robotSeqArray || robotSeqArray.length === 0) return '';
@@ -190,16 +190,16 @@ const chartOption = computed(() => {
             if (!robotSeq) return '';
             
             const robot = robotsStore.robots.find(r => r.seq === robotSeq);
-            return robot ? `ë¡œë´‡: ${robot.nickname || robot.manufactureName || robotSeq}` : '';
+            return robot ? `??: ${robot.nickname || robot.manufactureName || robotSeq}` : '';
           }
           
-          // ?¸ë“œ ?œë¦¬ì¦ˆì¸ ê²½ìš° - monitoring modeê°€ ?„ë‹ ?Œë§Œ ì¢Œí‘œ ?œì‹œ
+          // ??? ????? ?? - monitoring mode? ??? ??? ?? ???
           if (!props.isMonitoringMode && params.componentSubType === 'scatter' && Array.isArray(params.data)) {
             const x = Number(params.data[0]);
             const y = Number(params.data[1]);
             
             if (isNaN(x) || isNaN(y)) return '';
-            return `ì¢Œí‘œ: (${x.toFixed(2)}, ${y.toFixed(2)})`;
+            return `??: (${x.toFixed(2)}, ${y.toFixed(2)})`;
           }
           
           return '';
@@ -379,7 +379,7 @@ function updateChartSeries() {
         tooltip: {
           formatter: () => {
             const robot = robotsStore.robots.find(r => r.seq === robotSeq);
-            return `ë¡œë´‡: ${robot?.nickname || robot?.manufactureName || robotSeq}`;
+            return `??: ${robot?.nickname || robot?.manufactureName || robotSeq}`;
           }
         }
       });
@@ -399,25 +399,25 @@ function updateChartSeries() {
   }
 }
 
-// SSE ?¤ì •
+// SSE ???
 function setupSSE() {
-  // ê¸°ì¡´ ?°ê²°???•ë¦¬
+  // ?? ????????
   if (robotPositions.value) {
-    robotPositions.value.clear() // ê¸°ì¡´ ?„ì¹˜ ?•ë³´??ì´ˆê¸°??
+    robotPositions.value.clear() // ?? ??? ?????????
   }
   if (eventSources) {
     eventSources.forEach(source => source.close())
     eventSources.clear()
   }
   
-  // seqê°€ 1ê³?2??ë¡œë´‡???€?´ì„œë§?SSE ?¤ì •
+  // seq? 1??2?????????????SSE ???
   const newEventSources = new Map()
   
   const activeRobots = robotsStore.robots
     .filter(robot => (robot.seq === 1 || robot.seq === 2) && (robot?.isActive === true || robot?.IsActive === true));
   
   activeRobots.forEach(robot => {
-    console.log(`Setting up SSE for robot ${robot.seq}`) // ?”ë²„ê¹…ìš©
+    console.log(`Setting up SSE for robot ${robot.seq}`) // ?????
     const url = `/api/v1/robots/sse/${robot.seq}/down-utm`
     const eventSource = new EventSource(url)
     
@@ -442,14 +442,14 @@ function setupSSE() {
           lastUpdate = now
         }
       } catch (error) {
-        console.error(`SSE message parsing error (ë¡œë´‡ ${robot.seq}):`, error)
+        console.error(`SSE message parsing error (?? ${robot.seq}):`, error)
       }
     }
 
     eventSource.onerror = (error) => {
-      console.error(`SSE ?°ê²° ?ëŸ¬ (ë¡œë´‡ ${robot.seq}):`, error)
+      console.error(`SSE ??? ??? (?? ${robot.seq}):`, error)
       eventSource.close()
-      robotPositions.value.delete(robot.seq) // ?ëŸ¬ ???„ì¹˜ ?•ë³´???? œ
+      robotPositions.value.delete(robot.seq) // ??? ????? ?????????
     }
 
     newEventSources.set(robot.seq, eventSource)
@@ -458,11 +458,11 @@ function setupSSE() {
   return newEventSources
 }
 
-// ë¡œë´‡ ?œì–´ ?¨ìˆ˜??
+// ?? ??? ?????
 async function handleNavigate() {
   try {
     await robotCommandsStore.navigateCommand(selectedNodes.value, currentRobotSeq.value)
-    // ëª…ë ¹ ?„ì†¡ ??? íƒ???¸ë“œ ì´ˆê¸°??
+    // ?? ??? ?????????? ????
     selectedNodes.value = []
     updateChartSeries()
     emit('selectedNodesChange', selectedNodes.value)
@@ -474,7 +474,7 @@ async function handleNavigate() {
 async function handlePatrol() {
   try {
     await robotCommandsStore.patrolCommand(selectedNodes.value, currentRobotSeq.value)
-    // ëª…ë ¹ ?„ì†¡ ??? íƒ???¸ë“œ ì´ˆê¸°??
+    // ?? ??? ?????????? ????
     selectedNodes.value = []
     updateChartSeries()
     emit('selectedNodesChange', selectedNodes.value)
@@ -496,9 +496,9 @@ async function handleResume() {
   await robotCommandsStore.resumeCommand(currentRobotSeq.value)
 }
 
-// ?¸ë“œ ?´ë¦­ ?¸ë“¤??
+// ??? ??? ?????
 function handleNodeClick(params) {
-  // ëª¨ë‹ˆ?°ë§ ëª¨ë“œ?ì„œ???¸ë“œ ?´ë¦­ ë¹„í™œ?±í™”
+  // ????? ?????????? ??? ?????
   if (props.isMonitoringMode) return
   
   if (params.componentSubType === 'scatter') {
@@ -520,7 +520,7 @@ function handleNodeClick(params) {
   }
 }
 
-// ?¸ë“œ ?œê±° ?¸ë“¤??
+// ??? ??? ?????
 const handleNodeRemove = ({ node }) => {
   const index = selectedNodes.value.findIndex(n => 
     n.id[0].toFixed(2) === node.x && n.id[1].toFixed(2) === node.y
@@ -533,7 +533,7 @@ const handleNodeRemove = ({ node }) => {
   }
 }
 
-// ë§??°ì´??fetch
+// ???????fetch
 async function fetchMapData() {
   try {
     loading.value = true
@@ -541,7 +541,7 @@ async function fetchMapData() {
     mapData.value = { nodes: response.data.nodes, links: response.data.links }
     updateChartSeries()
   } catch (error) {
-    console.error('ë§??°ì´??ë¡œë”© ?¤íŒ¨:', error)
+    console.error('????????? ???:', error)
   } finally {
     loading.value = false
   }
@@ -550,18 +550,18 @@ async function fetchMapData() {
 // Watchers
 let eventSources = new Map()
 
-// robotsStore.robotsê°€ ë³€ê²½ë  ??SSE ?¬ì„¤??
-watch(() => robotsStore.robots, (newRobots) => {
-  console.log('Robots changed:', newRobots.map(r => r.seq))
-  if (eventSources.size > 0) {
-    console.log('Closing existing SSE connections')
+// robotsStore.robots? ??? ??SSE ?????
+// robots seq ??? ?? ?? SSE ??? (?? ?? ? ???? ??? ??)
+watch(
+  () => robotsStore.robots.map(r => r.seq).join(','),
+  () => {
     eventSources.forEach(source => source.close())
     eventSources.clear()
+    eventSources = setupSSE()
   }
-  eventSources = setupSSE()
-}, { deep: true })
+)
 
-// currentRobotSeq ë³€ê²??œì—??? íƒ??ë¡œë´‡ë§??…ë°?´íŠ¸
+// currentRobotSeq ???????????????????????
 watch(() => currentRobotSeq.value, () => {
   updateChartSeries()
 })
@@ -576,13 +576,13 @@ watch(selectedNodes, () => {
   updateChartSeries()
 })
 
-watch(() => props.robot, (newRobot) => {
-  if (newRobot) {
-    console.log('Robot changed in RobotMap:', newRobot)
+// ?? ???? ??? ?? ?? ?? ??? (?? ??? ??)
+watch(() => props.robot?.seq, (newSeq, oldSeq) => {
+  if (newSeq && newSeq !== oldSeq) {
     selectedNodes.value = []
     updateChartSeries()
   }
-}, { deep: true })
+})
 
 // Lifecycle hooks
 onMounted(() => {
@@ -607,16 +607,16 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
-  console.log('Cleaning up SSE connections...') // ?”ë²„ê¹…ìš©
+  console.log('Cleaning up SSE connections...') // ?????
   eventSources.forEach(source => {
     source.close()
-    console.log('Closed SSE connection') // ?”ë²„ê¹…ìš©
+    console.log('Closed SSE connection') // ?????
   })
   eventSources.clear()
-  robotPositions.value.clear() // ?„ì¹˜ ?•ë³´???•ë¦¬
+  robotPositions.value.clear() // ??? ????????
 })
 
-// ?¸ë?ë¡??¸ì¶œ??ë©”ì„œ??
+// ???????????????
 defineExpose({
   handleNavigate,
   handlePatrol,

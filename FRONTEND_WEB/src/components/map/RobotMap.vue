@@ -1,14 +1,29 @@
 <template>
   <div class="flex flex-col bg-white">
     <div class="flex-1 relative p-1">
-      <div class="relative w-full h-[450px] min-h-[20px] mx-auto" ref="containerRef">
+      <div class="relative w-full h-[450px] min-h-[20px] mx-auto bg-white" ref="containerRef">
+        <!-- 배경 지도 이미지: ECharts graphic 대신 CSS overlay로 안정적으로 표시 -->
+        <img
+          v-if="bgRect.width > 0"
+          src="/images/row-map.png"
+          class="absolute pointer-events-none select-none"
+          :style="{
+            left: bgRect.left + 'px',
+            top: bgRect.top + 'px',
+            width: bgRect.width + 'px',
+            height: bgRect.height + 'px',
+            opacity: 0.6,
+            zIndex: 0
+          }"
+        />
         <v-chart
           class="absolute inset-0 w-full h-full"
           :option="chartOption"
           ref="chartRef"
           autoresize
           @click="handleNodeClick"
-          @finished="updateBgImage"
+          @finished="recalcBgRect"
+          style="background: transparent; z-index: 1"
         />
       </div>
 
@@ -27,7 +42,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch, onUnmounted } from 'vue'
+import { ref, computed, onMounted, watch, onUnmounted, nextTick } from 'vue'
 import axios from 'axios'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
@@ -72,7 +87,8 @@ const selectedNodes = ref([])
 const imageWidth = ref(800)
 const imageHeight = ref(500)
 const robotPositions = ref(new Map()) // ??? ????????????????Map
-let _lastBgPos = null
+// 배경 이미지 CSS 위치 (convertToPixel 기반, ECharts graphic 대신 CSS overlay 사용)
+const bgRect = ref({ left: 0, top: 0, width: 0, height: 0 })
 
 // Props ???
 const props = defineProps({
@@ -158,7 +174,7 @@ const chartOption = computed(() => {
 
   return {
     animation: false,
-    backgroundColor: '#fff',
+    backgroundColor: 'transparent',
     grid: {
       left: '5%',
       right: '5%',
@@ -533,47 +549,31 @@ const handleNodeRemove = ({ node }) => {
   }
 }
 
-// 배경 이미지를 차트 그리드 영역에 맞게 배치
-function updateBgImage() {
+// 배경 이미지 위치를 UTM 좌표 기준으로 계산 (CSS overlay 방식)
+// ECharts graphic 대신 <img> div를 절대위치로 차트 뒤에 깔아 안정적으로 표시
+function recalcBgRect() {
   if (!chartRef.value) return
-  try {
-    // 그리드 좌상단(xMin,yMax)과 우하단(xMax,yMin)의 픽셀 위치를 계산
-    const tl = chartRef.value.convertToPixel(
-      { xAxisIndex: 0, yAxisIndex: 0 },
-      [MAP_UTM.xMin, MAP_UTM.yMax]
-    )
-    const br = chartRef.value.convertToPixel(
-      { xAxisIndex: 0, yAxisIndex: 0 },
-      [MAP_UTM.xMax, MAP_UTM.yMin]
-    )
-    if (!tl || !br) return
-    const w = br[0] - tl[0]
-    const h = br[1] - tl[1]
-    if (w <= 0 || h <= 0) return
-
-    // 위치가 바뀌었을 때만 setOption (무한루프 방지)
-    const pos = `${tl[0].toFixed(0)},${tl[1].toFixed(0)},${w.toFixed(0)},${h.toFixed(0)}`
-    if (pos === _lastBgPos) return
-    _lastBgPos = pos
-
-    chartRef.value.setOption({
-      graphic: [{
-        type: 'image',
-        id: 'bgMapFloor',
-        z: -10,
-        x: tl[0],
-        y: tl[1],
-        style: {
-          image: '/images/row-map.png',
-          width: w,
-          height: h,
-          opacity: 0.6
-        }
-      }]
-    }, false)  // notMerge=false: 기존 graphic 유지하면서 병합
-  } catch (e) {
-    console.warn('[RobotMap] bg image positioning error:', e)
-  }
+  nextTick(() => {
+    try {
+      const tl = chartRef.value.convertToPixel(
+        { xAxisIndex: 0, yAxisIndex: 0 },
+        [MAP_UTM.xMin, MAP_UTM.yMax]   // 좌상단
+      )
+      const br = chartRef.value.convertToPixel(
+        { xAxisIndex: 0, yAxisIndex: 0 },
+        [MAP_UTM.xMax, MAP_UTM.yMin]   // 우하단
+      )
+      if (!tl || !br || br[0] <= tl[0] || br[1] <= tl[1]) return
+      bgRect.value = {
+        left: tl[0],
+        top: tl[1],
+        width: br[0] - tl[0],
+        height: br[1] - tl[1]
+      }
+    } catch (e) {
+      console.warn('[RobotMap] recalcBgRect error:', e)
+    }
+  })
 }
 
 // ???????fetch
@@ -636,8 +636,8 @@ onMounted(() => {
       imageHeight.value = height * 0.95
 
       if (chartRef.value) {
-        _lastBgPos = null   // 리사이즈 후 이미지 재배치 강제
         chartRef.value.resize()
+        recalcBgRect()
       }
     }
   })

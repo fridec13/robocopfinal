@@ -9,7 +9,9 @@
 
 ```
 [Windows 11]
-  ├── MongoDB Community (localhost:27017)
+  ├── Docker Desktop
+  │     ├── MongoDB (localhost:27017)   ← docker-compose 또는 docker run
+  │     └── Redis   (localhost:6379)   ← docker-compose 또는 docker run
   ├── Python FastAPI 백엔드 (localhost:8080)
   └── Vue.js + Vite 프론트엔드 (localhost:5173)
 
@@ -23,23 +25,22 @@
 백엔드는 WSL2 IP(`.env`의 `ROS_BRIDGE_HOST`)를 통해 rosbridge에 접속한다.  
 WSL2 IP는 재부팅마다 바뀔 수 있으므로 매번 확인이 필요하다.
 
+> **MongoDB · Redis 설치 방법**: Windows에 직접 설치하거나, **Docker Desktop으로 컨테이너로 실행**하는 두 가지 방법이 있다. Docker를 권장한다.
+
 ---
 
 ## 사전 요구 사항 (최초 1회 설치)
 
 ### Windows
 
-| 소프트웨어 | 버전 | 비고 |
-|-----------|------|------|
-| Python | 3.10 이상 | python.org |
-| Node.js | 18 LTS 이상 | nodejs.org |
-| MongoDB Community | 7.x | mongodb.com/try/download/community |
+| 소프트웨어 | 버전 | 설치 링크 |
+|-----------|------|----------|
+| Python | 3.10 이상 | [python.org](https://www.python.org/downloads/) |
+| Node.js | 18 LTS 이상 | [nodejs.org](https://nodejs.org/) |
+| Docker Desktop | 최신 | [docker.com/products/docker-desktop](https://www.docker.com/products/docker-desktop/) |
 | WSL2 | — | 아래 참고 |
 
-```powershell
-# MongoDB가 Windows 서비스로 자동 시작되는지 확인
-Get-Service -Name MongoDB
-```
+> MongoDB Community를 Windows 서비스로 직접 설치한 경우에도 동작하지만, **Docker 사용을 권장**한다. (데이터 볼륨 관리가 편리하고 포트 충돌 위험이 낮음)
 
 ### WSL2 — Ubuntu 22.04 최초 설치
 
@@ -48,6 +49,95 @@ Get-Service -Name MongoDB
 wsl --install -d Ubuntu-22.04
 wsl --set-default-version 2
 ```
+
+---
+
+## 0단계 — MongoDB · Redis Docker 설치 (최초 1회)
+
+> Docker Desktop이 실행 중인 상태에서 진행한다.
+
+### 방법 A — docker-compose 사용 (권장)
+
+프로젝트에 포함된 `docker-compose.yml`에서 MongoDB · Redis 서비스만 분리해서 실행하는 방법이다.
+
+```powershell
+cd BACKEND\BACKEND_WAS
+
+# MongoDB + Redis 컨테이너만 백그라운드 실행
+docker compose up -d mongodb redis
+```
+
+정상 실행 확인:
+
+```powershell
+docker ps
+# CONTAINER ID   IMAGE   COMMAND    PORTS     NAMES
+# xxxxxxxxxxxx   mongo   ...        ...       mongodb
+# xxxxxxxxxxxx   redis   ...        ...       redis
+```
+
+데이터는 Docker named volume(`mongodb_data`, `redis_data`)에 영구 저장된다.  
+컨테이너를 내렸다 올려도 데이터가 유지된다.
+
+```powershell
+# 중지 (데이터 유지)
+docker compose stop mongodb redis
+
+# 재시작
+docker compose start mongodb redis
+```
+
+---
+
+### 방법 B — docker run 개별 실행
+
+docker-compose 없이 각각 실행하는 방법이다.
+
+```powershell
+# MongoDB
+docker run -d `
+  --name mongodb `
+  -p 27017:27017 `
+  -v mongodb_data:/data/db `
+  -e TZ=Asia/Seoul `
+  --restart unless-stopped `
+  mongo
+
+# Redis
+docker run -d `
+  --name redis `
+  -p 6379:6379 `
+  -v redis_data:/data `
+  -e TZ=Asia/Seoul `
+  --restart unless-stopped `
+  redis redis-server --save 60 1
+```
+
+---
+
+### 연결 확인
+
+```powershell
+# MongoDB 접속 테스트
+docker exec -it mongodb mongosh --eval "db.runCommand({ ping: 1 })"
+# 출력: { ok: 1 }
+
+# Redis 접속 테스트
+docker exec -it redis redis-cli ping
+# 출력: PONG
+```
+
+### .env 설정값 (Docker 사용 시 그대로 사용)
+
+```dotenv
+MONGODB_URL=mongodb://localhost:27017
+MONGODB_DB_NAME=robocop
+
+REDIS_HOST=127.0.0.1
+REDIS_PORT=6379
+```
+
+Docker 컨테이너가 `--network host` (Linux) 또는 포트 바인딩(`-p`)으로 실행되므로 `localhost`로 접근 가능하다.
 
 ---
 
@@ -287,6 +377,9 @@ db.robots.countDocuments()   # > 0 이면 정상
 ```
 [매 개발 세션 시작 시]
 
+0. Docker Desktop 실행 후 MongoDB · Redis 시작
+   docker compose up -d mongodb redis   (BACKEND/BACKEND_WAS 디렉터리)
+
 1. WSL2 IP 확인 → .env ROS_BRIDGE_HOST 업데이트 (IP 바뀐 경우)
 
 2. WSL2 터미널 1: rosbridge 실행
@@ -349,6 +442,22 @@ ros2 topic list | grep velodyne
 # /samsung/velodyne_points
 # /ssafy/velodyne_points
 ```
+
+### MongoDB · Redis 컨테이너가 뜨지 않음
+
+```powershell
+# 로그 확인
+docker logs mongodb
+docker logs redis
+
+# 포트 충돌 확인 (27017이 이미 사용 중인 경우)
+netstat -ano | findstr :27017
+# Windows MongoDB 서비스가 실행 중이면 중지
+Stop-Service MongoDB
+```
+
+Windows에 MongoDB Community가 서비스로 설치되어 있으면 Docker 컨테이너와 포트가 충돌한다.  
+둘 중 하나만 사용한다.
 
 ### MongoDB `E11000 duplicate key error`
 

@@ -24,16 +24,16 @@ class CameraService:
 
     def __init__(self):
         self.seq: Optional[int] = None
-        self.fps: int = 5
-        self.jpeg_quality: int = 70
-        self.frame_size: tuple = (480, 360)
+        self.fps: int = 20
+        self.jpeg_quality: int = 60
+        self.frame_size: tuple = (320, 240)
 
         self.ros_bridge: Optional[RosBridgeConnection] = None
         self.isaac_bridge: Optional[RosBridgeConnection] = None
         self.client_id: Optional[str] = None
 
-        self._front_queue: asyncio.Queue = asyncio.Queue(maxsize=2)
-        self._rear_queue: asyncio.Queue = asyncio.Queue(maxsize=2)
+        self._front_queue: asyncio.Queue = asyncio.Queue(maxsize=4)
+        self._rear_queue: asyncio.Queue = asyncio.Queue(maxsize=4)
 
         # topic 메타 (set_front/rear_topic 에서 저장, 실제 구독은 stream 시작 시)
         self._front_topic_name: Optional[str] = None

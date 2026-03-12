@@ -35,15 +35,17 @@ let isLiveDataEnabled = false;
 // Three.js 초기화
 const initThree = () => {
   scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x000000);
+  scene.background = new THREE.Color(0x111111);
 
   camera = new THREE.PerspectiveCamera(
-    75,
+    60,
     container.value.clientWidth / container.value.clientHeight,
-    0.1,
-    1000
+    0.01,
+    200
   );
-  camera.position.set(5, 5, 5);
+  // 2D LaserScan은 x-y 평면 → 위(+z)에서 내려다보기
+  camera.position.set(0, 0, 12);
+  camera.up.set(0, 1, 0);
   camera.lookAt(0, 0, 0);
 
   renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -53,14 +55,30 @@ const initThree = () => {
   controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
   controls.dampingFactor = 0.05;
+  controls.screenSpacePanning = true;
 
-  // 좌표축 헬퍼
-  const axesHelper = new THREE.AxesHelper(5);
+  // x-y 평면 그리드 (GridHelper는 기본이 x-z 평면이므로 90° 회전)
+  const grid = new THREE.GridHelper(20, 20, 0x333333, 0x222222);
+  grid.rotation.x = Math.PI / 2;
+  scene.add(grid);
+
+  // 좌표축 헬퍼 (x=빨강, y=초록, z=파랑)
+  const axesHelper = new THREE.AxesHelper(2);
   scene.add(axesHelper);
+
+  // 원점 마커 — 로봇 위치 (빨간 원)
+  const originGeo = new THREE.CircleGeometry(0.15, 16);
+  const originMat = new THREE.MeshBasicMaterial({ color: 0xff3333 });
+  const originMesh = new THREE.Mesh(originGeo, originMat);
+  scene.add(originMesh);
 
   // 초기 포인트클라우드
   const geometry = new THREE.BufferGeometry();
-  const material = new THREE.PointsMaterial({ size: 0.05, vertexColors: true });
+  const material = new THREE.PointsMaterial({
+    size: 0.06,
+    vertexColors: true,
+    sizeAttenuation: true,
+  });
   pointCloud = new THREE.Points(geometry, material);
   scene.add(pointCloud);
 
@@ -72,13 +90,18 @@ const updatePointCloud = (pcdData) => {
   if (!pcdData || !pcdData.positions || pcdData.positions.length === 0) return;
 
   const positions = new Float32Array(pcdData.positions);
-  const colors = new Float32Array(pcdData.positions.length);
+  const numPoints = positions.length / 3;
+  const colors = new Float32Array(numPoints * 3);
 
-  for (let i = 0; i < pcdData.intensities.length; i++) {
-    const colorIndex = i * 3;
-    colors[colorIndex] = 1.0;
-    colors[colorIndex + 1] = 1.0;
-    colors[colorIndex + 2] = 1.0;
+  // 거리에 따라 파랑(가까움) → 초록 → 노랑(멀리)
+  for (let i = 0; i < numPoints; i++) {
+    const x = positions[i * 3];
+    const y = positions[i * 3 + 1];
+    const dist = Math.sqrt(x * x + y * y);
+    const t = Math.min(dist / 8.0, 1.0); // 0~8m 기준 정규화
+    colors[i * 3]     = t;           // R
+    colors[i * 3 + 1] = 1.0 - t * 0.5; // G
+    colors[i * 3 + 2] = 1.0 - t;    // B
   }
 
   pointCloud.geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));

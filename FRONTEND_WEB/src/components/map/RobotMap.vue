@@ -534,24 +534,25 @@ const handleNodeRemove = ({ node }) => {
   }
 }
 
-// 배경 이미지를 UTM 좌표계에 정확히 배치 (convertToPixel 사용)
+// 배경 이미지를 차트 그리드 영역에 맞게 배치
 function updateBgImage() {
   if (!chartRef.value) return
   try {
+    // 그리드 좌상단(xMin,yMax)과 우하단(xMax,yMin)의 픽셀 위치를 계산
     const tl = chartRef.value.convertToPixel(
       { xAxisIndex: 0, yAxisIndex: 0 },
-      [MAP_UTM.xMin, MAP_UTM.yMax]   // 좌상단 (x최소, y최대)
+      [MAP_UTM.xMin, MAP_UTM.yMax]
     )
     const br = chartRef.value.convertToPixel(
       { xAxisIndex: 0, yAxisIndex: 0 },
-      [MAP_UTM.xMax, MAP_UTM.yMin]   // 우하단 (x최대, y최소)
+      [MAP_UTM.xMax, MAP_UTM.yMin]
     )
     if (!tl || !br) return
     const w = br[0] - tl[0]
     const h = br[1] - tl[1]
     if (w <= 0 || h <= 0) return
 
-    // 위치가 실질적으로 바뀌었을 때만 setOption (무한루프 방지)
+    // 위치가 바뀌었을 때만 setOption (무한루프 방지)
     const pos = `${tl[0].toFixed(0)},${tl[1].toFixed(0)},${w.toFixed(0)},${h.toFixed(0)}`
     if (pos === _lastBgPos) return
     _lastBgPos = pos
@@ -564,10 +565,10 @@ function updateBgImage() {
         x: tl[0],
         y: tl[1],
         style: {
-          image: '/images/map-floor.png',
+          image: '/images/row-map.png',
           width: w,
           height: h,
-          opacity: 0.75
+          opacity: 0.6
         }
       }]
     })

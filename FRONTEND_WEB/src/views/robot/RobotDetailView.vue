@@ -31,14 +31,30 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
+import { useRoute } from 'vue-router';
 import { useRobotsStore } from '@/stores/robots';
 import RobotInfo from '@/components/detail/RobotInfo.vue';
 import RobotNickname from '@/components/detail/RobotNickname.vue';
 
+const route = useRoute();
 const robotsStore = useRobotsStore();
+
+// URL /:seq 우선, 없으면 스토어 selectedRobot 사용
+const robotSeq = computed(() => {
+  const seqFromRoute = route.params.seq ? parseInt(route.params.seq, 10) : null;
+  return seqFromRoute || robotsStore.selectedRobot || null;
+});
+
+// 라우트로 접근 시 스토어 selectedRobot도 동기화
+watch(robotSeq, (seq) => {
+  if (seq && robotsStore.selectedRobot !== seq) {
+    robotsStore.selectedRobot = seq;
+  }
+}, { immediate: true });
+
 const robot = computed(() => {
-  const seq = robotsStore.selectedRobot;
+  const seq = robotSeq.value;
   if (!seq) return null;
   return robotsStore.robots.find(r => r.seq === seq) || null;
 });

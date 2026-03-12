@@ -166,7 +166,6 @@ const chartOption = computed(() => {
       bottom: '5%',
       containLabel: true
     },
-    graphic: [],
     tooltip: {
       show: true,
       trigger: 'item',
@@ -571,7 +570,7 @@ function updateBgImage() {
           opacity: 0.6
         }
       }]
-    })
+    }, false)  // notMerge=false: 기존 graphic 유지하면서 병합
   } catch (e) {
     console.warn('[RobotMap] bg image positioning error:', e)
   }

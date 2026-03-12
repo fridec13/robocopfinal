@@ -90,65 +90,6 @@ function handleNodeClick3D(nodes) {
   emit('selectedNodesChange', selectedNodes.value)
 }
 
-// SSE ???
-function setupSSE() {
-  // ?? ????????
-  if (robotPositions.value) {
-    robotPositions.value.clear() // ?? ??? ?????????
-  }
-  if (eventSources) {
-    eventSources.forEach(source => source.close())
-    eventSources.clear()
-  }
-  
-  // seq? 1??2?????????????SSE ???
-  const newEventSources = new Map()
-  
-  const activeRobots = robotsStore.robots
-    .filter(robot => (robot.seq === 1 || robot.seq === 2) && (robot?.isActive === true || robot?.IsActive === true));
-  
-  activeRobots.forEach(robot => {
-    console.log(`Setting up SSE for robot ${robot.seq}`) // ?????
-    const url = `/api/v1/robots/sse/${robot.seq}/down-utm`
-    const eventSource = new EventSource(url)
-    
-    let lastUpdate = 0
-    const updateInterval = 300
-
-    eventSource.onmessage = (event) => {
-      try {
-        const now = Date.now()
-        if (now - lastUpdate < updateInterval) return
-
-        const data = JSON.parse(event.data)
-        if (data && data.position && 
-            typeof data.position.x === 'number' && 
-            typeof data.position.y === 'number' &&
-            !isNaN(data.position.x) && 
-            !isNaN(data.position.y)) {
-          robotPositions.value.set(robot.seq, {
-            x: data.position.x,
-            y: data.position.y
-          })
-          lastUpdate = now
-        }
-      } catch (error) {
-        console.error(`SSE message parsing error (?? ${robot.seq}):`, error)
-      }
-    }
-
-    eventSource.onerror = (error) => {
-      console.error(`SSE ??? ??? (?? ${robot.seq}):`, error)
-      eventSource.close()
-      robotPositions.value.delete(robot.seq) // ??? ????? ?????????
-    }
-
-    newEventSources.set(robot.seq, eventSource)
-  })
-
-  return newEventSources
-}
-
 // ?? ??? ?????
 async function handleNavigate() {
   try {

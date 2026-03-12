@@ -44,8 +44,8 @@ const initThree = () => {
     200
   );
   // 로봇 전방(+y) = 화면 위, 로봇 우측(+x) = 화면 오른쪽
-  // 위에서 살짝 기울여 입체감 유지
-  camera.position.set(0, -2, 14);
+  // 살짝 기울인 조감 시점 (y=-5, z=10)
+  camera.position.set(0, -5, 10);
   camera.up.set(0, 1, 0);
   camera.lookAt(0, 0, 0);
 

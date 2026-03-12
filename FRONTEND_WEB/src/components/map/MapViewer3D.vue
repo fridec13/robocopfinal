@@ -13,6 +13,32 @@
       마우스 드래그: 회전 | 휠: 줌 | 우클릭 드래그: 이동
     </div>
 
+    <!-- 좌표계 디버그 패널 -->
+    <div v-if="debugMode" class="absolute top-3 left-3 bg-black bg-opacity-75 text-xs rounded p-2 z-10 pointer-events-none leading-5 font-mono">
+      <div class="text-yellow-300 font-bold mb-1">📐 좌표계 (Three.js 씬)</div>
+      <div class="text-red-400">■ X (빨강) = East (+)</div>
+      <div class="text-green-400">■ Y (초록) = Up</div>
+      <div class="text-blue-400">■ Z (파랑) = South (+) = -North</div>
+      <div class="text-gray-300 mt-1 border-t border-gray-600 pt-1">
+        UTM→Scene 변환:<br/>
+        scene.x = utm_x − {{ UTM_ORIGIN_X }}<br/>
+        scene.z = −(utm_y − {{ UTM_ORIGIN_Y }})
+      </div>
+      <div v-if="debugCursor.visible" class="mt-1 border-t border-gray-600 pt-1 text-cyan-300">
+        scene: x={{ debugCursor.x }}, y={{ debugCursor.y }}, z={{ debugCursor.z }}<br/>
+        UTM: ({{ debugCursor.utmX }}, {{ debugCursor.utmY }})
+      </div>
+    </div>
+
+    <!-- 디버그 토글 버튼 -->
+    <button
+      @click="debugMode = !debugMode"
+      class="absolute bottom-3 left-3 text-xs px-2 py-1 rounded z-10"
+      :class="debugMode ? 'bg-yellow-500 text-black' : 'bg-gray-700 text-gray-300'"
+    >
+      좌표계 {{ debugMode ? 'ON' : 'OFF' }}
+    </button>
+
     <!-- 로봇 범례 -->
     <div v-if="robotLegends.length" class="absolute top-3 right-3 bg-black bg-opacity-60 rounded px-2 py-1 z-10 text-xs text-white space-y-1">
       <div v-for="r in robotLegends" :key="r.seq" class="flex items-center gap-2">
@@ -44,8 +70,8 @@ const robotsStore = useRobotsStore()
 // ── UTM ↔ 3D 좌표 변환 ────────────────────────────────────────────────────
 // c101.world GPS origin: lat=35.1595, lon=126.8526 → UTM(304411.646, 3892842.473)
 // Three.js 씬 좌표 = Gazebo 로컬 좌표 (미터 단위)
-const UTM_ORIGIN_X = 304411.646
-const UTM_ORIGIN_Y = 3892842.473
+const UTM_ORIGIN_X = 304411.645
+const UTM_ORIGIN_Y = 3892836.76
 function utmToScene(utmX, utmY) {
   // Gazebo: +x=East, +y=North, Three.js: +x=East, +z=South (y=up)
   return {
@@ -71,10 +97,13 @@ const robotLegends = computed(() =>
 const containerRef = ref(null)
 const loading = ref(true)
 const robotPositions = ref({})  // { seq: { x, y } } in UTM
+const debugMode = ref(false)
+const debugCursor = ref({ visible: false, x: 0, z: 0, utmX: 0, utmY: 0 })
 
 // ── Three.js 내부 객체 ─────────────────────────────────────────────────────
 let scene, camera, renderer, controls, animFrame
 let robotMeshes = {}        // { seq: THREE.Mesh }
+let glbMeshes = []          // GLB 내부 메쉬 (디버그 클릭용)
 let nodeMeshes = []
 let linkLines = []
 let selectedNodeSeqs = new Set()
@@ -119,6 +148,17 @@ function initScene() {
   dirLight.castShadow = true
   scene.add(dirLight)
 
+  // 좌표축 헬퍼 (X=빨강, Y=초록, Z=파랑), 길이 15m
+  scene.add(new THREE.AxesHelper(15))
+
+  // 원점 마커: 노란 구체 = UTM 기준점 (304411.646, 3892842.473)
+  const originMarker = new THREE.Mesh(
+    new THREE.SphereGeometry(0.4, 8, 8),
+    new THREE.MeshBasicMaterial({ color: 0xffff00 })
+  )
+  originMarker.position.set(0, 0.5, 0)
+  scene.add(originMarker)
+
   // GLB 시도 → 없으면 map.png fallback
   loadMap()
 
@@ -137,7 +177,14 @@ function loadMap() {
   loader.load(
     '/models/office.glb',
     (gltf) => {
+      // GLB 모델 위치 오프셋 (좌표계 정렬용)
+      // Z offset 최대 2.2m까지 허용 (그 이상은 북쪽 노드가 건물 밖으로 나감)
+      gltf.scene.position.set(2.4, 0, 1.5)
       scene.add(gltf.scene)
+      // GLB 내부 메쉬 수집 (디버그 클릭용)
+      gltf.scene.traverse(obj => {
+        if (obj.isMesh) glbMeshes.push(obj)
+      })
       // GLB 바운딩 박스 계산해서 카메라 포커스
       const box = new THREE.Box3().setFromObject(gltf.scene)
       const center = box.getCenter(new THREE.Vector3())
@@ -279,7 +326,11 @@ function updateRobotMarkers() {
 
 // ── 노드 클릭 (raycasting) ────────────────────────────────────────────────
 function onClick(e) {
-  if (props.isMonitoringMode) return
+  // 휠클릭(button=1)은 디버그 전용, 좌클릭(button=0)은 노드 선택
+  if (e.button === 1) e.preventDefault()
+  if (e.button !== 0 && e.button !== 1) return
+  const isDebugClick = e.button === 1
+  if (!isDebugClick && props.isMonitoringMode) return
   const el = containerRef.value
   const rect = el.getBoundingClientRect()
   const mouse = new THREE.Vector2(
@@ -288,6 +339,34 @@ function onClick(e) {
   )
   const raycaster = new THREE.Raycaster()
   raycaster.setFromCamera(mouse, camera)
+  // 디버그 모드: 휠클릭으로 GLB 메쉬 → 바닥 평면 좌표 표시
+  if (debugMode.value && isDebugClick) {
+    let hit3D = null
+
+    // 1순위: GLB 메쉬 표면 교차
+    const glbHits = raycaster.intersectObjects(glbMeshes, false)
+    if (glbHits.length) {
+      hit3D = glbHits[0].point
+    } else {
+      // 2순위: Y=0 바닥 평면 교차
+      const groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0)
+      const pt = new THREE.Vector3()
+      if (raycaster.ray.intersectPlane(groundPlane, pt)) hit3D = pt
+    }
+
+    if (hit3D) {
+      debugCursor.value = {
+        visible: true,
+        x: Math.round(hit3D.x * 100) / 100,
+        y: Math.round(hit3D.y * 100) / 100,
+        z: Math.round(hit3D.z * 100) / 100,
+        utmX: Math.round((hit3D.x + UTM_ORIGIN_X) * 100) / 100,
+        utmY: Math.round((-hit3D.z + UTM_ORIGIN_Y) * 100) / 100,
+      }
+    }
+  }
+
+  if (isDebugClick) return  // 휠클릭은 디버그 전용, 노드 선택 안 함
   const hits = raycaster.intersectObjects(nodeMeshes)
   if (hits.length) {
     const node = hits[0].object.userData.node
@@ -337,7 +416,7 @@ watch(() => [props.mapNodes, props.mapLinks], renderMapData, { deep: true })
 // ── Lifecycle ──────────────────────────────────────────────────────────────
 onMounted(() => {
   initScene()
-  containerRef.value.addEventListener('click', onClick)
+  containerRef.value.addEventListener('mousedown', onClick)
   _resizeObs = new ResizeObserver(onResize)
   _resizeObs.observe(containerRef.value)
 })
@@ -347,6 +426,6 @@ onUnmounted(() => {
   renderer?.dispose()
   controls?.dispose()
   _resizeObs?.disconnect()
-  containerRef.value?.removeEventListener('click', onClick)
+  containerRef.value?.removeEventListener('mousedown', onClick)
 })
 </script>

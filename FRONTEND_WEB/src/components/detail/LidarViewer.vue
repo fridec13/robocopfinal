@@ -43,9 +43,10 @@ const initThree = () => {
     0.01,
     200
   );
-  // 3D Velodyne: 비스듬히 내려다보는 시점
-  camera.position.set(0, -10, 8);
-  camera.up.set(0, 0, 1);
+  // 로봇 전방(+y) = 화면 위, 로봇 우측(+x) = 화면 오른쪽
+  // 위에서 살짝 기울여 입체감 유지
+  camera.position.set(0, -2, 14);
+  camera.up.set(0, 1, 0);
   camera.lookAt(0, 0, 0);
 
   renderer = new THREE.WebGLRenderer({ antialias: true });

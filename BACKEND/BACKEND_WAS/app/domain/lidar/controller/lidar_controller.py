@@ -91,7 +91,13 @@ async def lidar_scan_sse(seq: int, request: Request):
                     continue
                 if math.isinf(x) or math.isinf(y) or math.isinf(z):
                     continue
-                positions.extend([x, y, z])
+                # ROS 좌표계 → Three.js z-up 맵뷰 변환
+                # ROS: x=전방, y=좌, z=상
+                # Three.js 카메라가 -y 방향에서 바라보므로:
+                #   three_x = -ros_y  (ROS 좌 → Three.js 오른쪽)
+                #   three_y =  ros_x  (ROS 전방 → Three.js y = 화면 위쪽)
+                #   three_z =  ros_z  (높이는 그대로)
+                positions.extend([-y, x, z])
                 try:
                     intensity = struct.unpack_from('<f', data_bytes, off + i_off)[0]
                     intensities.append(float(intensity) if not math.isnan(intensity) else 1.0)

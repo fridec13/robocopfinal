@@ -34,28 +34,53 @@
       </span>
     </div>
 
-    <!-- 메인 영역: 좌측 카메라 / 우측 조작패드 -->
+    <!-- 메인 영역: 좌측 카메라+라이다 / 우측 조작패드 -->
     <div class="flex-1 flex gap-3 min-h-0">
 
-      <!-- 좌측 — 전방 카메라 -->
-      <div class="flex-1 min-w-0 bg-black rounded-lg overflow-hidden flex flex-col">
-        <div class="px-3 py-1.5 bg-gray-900 flex items-center gap-2">
-          <span class="w-2 h-2 rounded-full" :class="isManualMode ? 'bg-green-400 animate-pulse' : 'bg-gray-500'"></span>
-          <span class="text-xs text-gray-300 font-medium">
-            {{ '\uc804\ubc29 \uce74\uba54\ub77c' }} — seq {{ selectedSeq }}
-          </span>
-        </div>
-        <div class="flex-1 min-h-0">
-          <Cctv
-            v-if="selectedSeq"
-            :robotSeq="selectedSeq"
-            cameraType="front"
-            class="w-full h-full"
-          />
-          <div v-else class="w-full h-full flex items-center justify-center text-gray-500 text-sm">
-            {{ '\ub85c\ubd07\uc744 \uc120\ud0dd\ud558\uc138\uc694' }}
+      <!-- 좌측 — 전방 카메라 + 라이다 -->
+      <div class="flex-1 min-w-0 flex flex-col gap-3 min-h-0">
+
+        <!-- 전방 카메라 -->
+        <div class="flex-[3] min-h-0 bg-black rounded-lg overflow-hidden flex flex-col">
+          <div class="px-3 py-1.5 bg-gray-900 flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full" :class="isManualMode ? 'bg-green-400 animate-pulse' : 'bg-gray-500'"></span>
+            <span class="text-xs text-gray-300 font-medium">
+              {{ '\uc804\ubc29 \uce74\uba54\ub77c' }} — seq {{ selectedSeq }}
+            </span>
+          </div>
+          <div class="flex-1 min-h-0">
+            <Cctv
+              v-if="selectedSeq"
+              :robotSeq="selectedSeq"
+              cameraType="front"
+              class="w-full h-full"
+            />
+            <div v-else class="w-full h-full flex items-center justify-center text-gray-500 text-sm">
+              {{ '\ub85c\ubd07\uc744 \uc120\ud0dd\ud558\uc138\uc694' }}
+            </div>
           </div>
         </div>
+
+        <!-- 라이다 -->
+        <div class="flex-[2] min-h-0 bg-gray-900 rounded-lg overflow-hidden flex flex-col">
+          <div class="px-3 py-1.5 bg-gray-800 flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
+            <span class="text-xs text-gray-300 font-medium">
+              {{ '\ub77c\uc774\ub2e4' }} — seq {{ selectedSeq }}
+            </span>
+          </div>
+          <div class="flex-1 min-h-0">
+            <LidarViewer
+              v-if="selectedSeq"
+              :robotSeq="selectedSeq"
+              class="w-full h-full"
+            />
+            <div v-else class="w-full h-full flex items-center justify-center text-gray-500 text-sm">
+              {{ '\ub85c\ubd07\uc744 \uc120\ud0dd\ud558\uc138\uc694' }}
+            </div>
+          </div>
+        </div>
+
       </div>
 
       <!-- 우측 — 조작패드 -->
@@ -134,6 +159,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import axios from 'axios'
 import { useRobotsStore } from '@/stores/robots'
 import Cctv from '@/components/camera/Cctv.vue'
+import LidarViewer from '@/components/detail/LidarViewer.vue'
 
 const robotsStore = useRobotsStore()
 

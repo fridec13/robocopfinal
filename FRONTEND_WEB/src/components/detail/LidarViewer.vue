@@ -1,5 +1,5 @@
 <template>
-  <div ref="container" class="w-full h-[400px] bg-black rounded-lg relative">
+  <div ref="container" class="w-full h-full min-h-[200px] bg-black rounded-lg relative">
     <div
       v-if="isLoading"
       class="absolute inset-0 flex items-center justify-center text-white text-sm"

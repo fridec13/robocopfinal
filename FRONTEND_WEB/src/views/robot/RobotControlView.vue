@@ -168,7 +168,7 @@ const authHeader = () => ({
 })
 
 const callService = async (name) => {
-  await axios.post(`/api/v1/ros/${selectedSeq.value}/call-service/${name}`, null, {
+  await axios.post(`/api/v1/${selectedSeq.value}/call-service/${name}`, null, {
     headers: authHeader()
   })
 }
@@ -199,7 +199,7 @@ let cmdInterval = null
 const sendCmd = async (dir) => {
   if (!selectedSeq.value) return
   try {
-    await axios.post(`/api/v1/ros/${selectedSeq.value}/cmd_vel`, null, {
+    await axios.post(`/api/v1/${selectedSeq.value}/cmd_vel`, null, {
       params: { direction: dir.toUpperCase() },
       headers: authHeader()
     })

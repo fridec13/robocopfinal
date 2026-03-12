@@ -15,7 +15,7 @@ const router = createRouter({
       path: '/',
       name: 'monitoring',
       component: MonitoringView,
-      meta: { requiresAuth: true } // ë¡œê·¸???„ìš”
+      meta: { requiresAuth: true }
     },
     {
       path: '/login',
@@ -27,55 +27,50 @@ const router = createRouter({
       path: '/management',
       name: 'management',
       component: ManagementView,
-      meta: { requiresAuth: true } // ë¡œê·¸???„ìš”
+      meta: { requiresAuth: true }
     },
     {
       path: '/:seq',
       name: 'detail',
       component: RobotDetailView,
-      meta: { requiresAuth: true } // ë¡œê·¸???„ìš”
+      meta: { requiresAuth: true }
     },
     {
       path: '/camera',
       name: 'camera',
       component: CameraView,
-      meta: { requiresAuth: true } // ë¡œê·¸???„ìš”
+      meta: { requiresAuth: true }
     },
     {
       path: '/enrollment',
       name: 'enrollment',
       component: EnrollmentView,
-      meta: { requiresAuth: true } // ë¡œê·¸???„ìš”
+      meta: { requiresAuth: true }
     },
     {
       path: '/control',
       name: 'control',
       component: RobotControlView,
-      meta: { requiresAuth: true } // ë¡œê·¸???„ìš”
+      meta: { requiresAuth: true }
     },
     {
       path: '/statistics',
       name: 'statistics',
       component: StatisticsView,
-      meta: { requiresAuth: true } // ë¡œê·¸???„ìš”
+      meta: { requiresAuth: true }
     }
   ]
 })
 
-// ?¤ë¹„ê²Œì´??ê°€??ì¶”ê? (ë¡œê·¸???¬ë? ?•ì¸)
 router.beforeEach((to, from, next) => {
-  const isAuthenticated = !!localStorage.getItem('accessToken'); // ë¡œê·¸???íƒœ ?•ì¸
+  const isAuthenticated = !!localStorage.getItem('accessToken');
 
   if (to.meta.requiresAuth && !isAuthenticated) {
-    // ë¡œê·¸???????íƒœ?ì„œ ?¸ì¦???„ìš”???˜ì´ì§€ë¡?ê°€?¤ê³  ?˜ë©´ ë¡œê·¸???˜ì´ì§€ë¡??´ë™
-    alert('ë¡œê·¸?¸ì´ ?„ìš”?©ë‹ˆ??');
     next('/login');
   } else if (to.meta.guestOnly && isAuthenticated) {
-    // ë¡œê·¸?¸ëœ ?¬ìš©?ê? ë¡œê·¸???˜ì´ì§€(`/login`)???‘ê·¼?˜ë ¤ê³??˜ë©´ ì°¨ë‹¨
-    alert('?´ë? ë¡œê·¸?¸ëœ ?íƒœ?…ë‹ˆ??');
     next('/');
   } else {
-    next(); // ?•ìƒ?ìœ¼ë¡??´ë™
+    next();
   }
 });
 

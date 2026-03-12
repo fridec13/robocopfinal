@@ -2,12 +2,20 @@
   <div class="h-full overflow-y-auto bg-gray-100 p-5">
     <div v-if="robot" class="space-y-4">
       <div class="border-b pb-2 mb-4 flex items-center justify-between">
-        <h1 class="text-2xl font-bold text-gray-800">
-          {{ robot.nickname || robot.manufactureName }}
-          <span class="text-sm" :class="robot.isActive ? 'text-green-500' : 'text-red-500'">
-            ({{ robot.isActive ? '활성화' : '비활성화' }})
-          </span>
-        </h1>
+        <div class="flex items-center gap-3">
+          <button
+            @click="router.push('/')"
+            class="flex items-center gap-1 px-3 py-1.5 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded text-sm font-medium transition"
+          >
+            ← 목록으로
+          </button>
+          <h1 class="text-2xl font-bold text-gray-800">
+            {{ robot.nickname || robot.manufactureName }}
+            <span class="text-sm" :class="robot.isActive ? 'text-green-500' : 'text-red-500'">
+              ({{ robot.isActive ? '활성화' : '비활성화' }})
+            </span>
+          </h1>
+        </div>
         <button
           @click="showNicknameModal = true"
           class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 text-sm"
@@ -78,7 +86,7 @@
 
 <script setup>
 import { ref, computed, watch } from 'vue';
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import { useRobotsStore } from '@/stores/robots';
 import { useRobotCommandsStore } from '@/stores/robotCommands';
 import RobotInfo from '@/components/detail/RobotInfo.vue';
@@ -86,6 +94,7 @@ import RobotNickname from '@/components/detail/RobotNickname.vue';
 import RobotMap from '@/components/map/RobotMap.vue';
 
 const route = useRoute();
+const router = useRouter();
 const robotsStore = useRobotsStore();
 const robotCommandsStore = useRobotCommandsStore();
 

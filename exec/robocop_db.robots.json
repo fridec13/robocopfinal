@@ -1,0 +1,794 @@
+[{
+  "_id": {
+    "$oid": "67b412768c8d331e30bf2ecd"
+  },
+  "seq": 1,
+  "manufactureName": "robot_1",
+  "nickname": "2F-221",
+  "sensorName": "ssafy",
+  "ipAddress": "196.168.0.1",
+  "networkStatus": "connected",
+  "status": "waiting",
+  "networkHealth": 100,
+  "position": {
+    "x": 0,
+    "y": 0,
+    "z": 0,
+    "orientation": 0
+  },
+  "motion": {
+    "kph": 0,
+    "mps": 0
+  },
+  "battery": {
+    "level": 100,
+    "isCharging": false,
+    "lastCharged": null
+  },
+  "cpuTemp": 0,
+  "image": null,
+  "waypoints": [],
+  "startAt": {
+    "$date": "2025-02-18T13:54:14.490Z"
+  },
+  "IsActive": true,
+  "IsDeleted": false,
+  "DeletedAt": null,
+  "lastActive": {
+    "$date": "2025-02-18T13:54:14.490Z"
+  },
+  "createdAt": {
+    "$date": "2025-02-18T13:54:14.490Z"
+  },
+  "updatedAt": {
+    "$date": "2025-02-19T12:01:57.409Z"
+  }
+},
+{
+  "_id": {
+    "$oid": "67b72273fde426dae18753e9"
+  },
+  "seq": 2,
+  "manufactureName": "robot_2",
+  "nickname": "2F-222",
+  "sensorName": "samsung",
+  "ipAddress": "123.123.123.123",
+  "networkStatus": "connected",
+  "status": "waiting",
+  "networkHealth": 100,
+  "position": {
+    "x": 0,
+    "y": 0,
+    "z": 0,
+    "orientation": 0
+  },
+  "motion": {
+    "kph": 0,
+    "mps": 0
+  },
+  "battery": {
+    "level": 100,
+    "isCharging": false,
+    "lastCharged": null
+  },
+  "cpuTemp": 0,
+  "image": null,
+  "waypoints": [],
+  "startAt": {
+    "$date": "2025-02-20T21:39:15.834Z"
+  },
+  "IsActive": true,
+  "IsDeleted": false,
+  "DeletedAt": null,
+  "lastActive": {
+    "$date": "2025-02-20T21:39:15.834Z"
+  },
+  "createdAt": {
+    "$date": "2025-02-20T21:39:15.834Z"
+  },
+  "updatedAt": null
+},
+{
+  "_id": {
+    "$oid": "67b75143eb379c6454785437"
+  },
+  "seq": 5,
+  "manufactureName": "robot_05",
+  "nickname": "1F-101",
+  "sensorName": "sensor_05",
+  "ipAddress": "125.133.12.1",
+  "networkStatus": "connected",
+  "status": "waiting",
+  "networkHealth": 0,
+  "position": {
+    "x": 0,
+    "y": 0,
+    "z": 0,
+    "orientation": 0
+  },
+  "motion": {
+    "kph": 0,
+    "mps": 0
+  },
+  "battery": {
+    "level": 0,
+    "isCharging": false,
+    "lastCharged": null
+  },
+  "cpuTemp": 0,
+  "image": null,
+  "waypoints": [],
+  "startAt": {
+    "$date": "2025-02-21T00:58:59.140Z"
+  },
+  "IsActive": false,
+  "IsDeleted": false,
+  "DeletedAt": null,
+  "lastActive": {
+    "$date": "2025-02-21T00:58:59.140Z"
+  },
+  "createdAt": {
+    "$date": "2025-02-21T00:58:59.140Z"
+  },
+  "updatedAt": null
+},
+{
+  "_id": {
+    "$oid": "67b75158eb379c6454785438"
+  },
+  "seq": 6,
+  "manufactureName": "robot_06",
+  "nickname": "1F-102",
+  "sensorName": "sensor_06",
+  "ipAddress": "125.133.11.2",
+  "networkStatus": "connected",
+  "status": "waiting",
+  "networkHealth": 0,
+  "position": {
+    "x": 0,
+    "y": 0,
+    "z": 0,
+    "orientation": 0
+  },
+  "motion": {
+    "kph": 0,
+    "mps": 0
+  },
+  "battery": {
+    "level": 0,
+    "isCharging": false,
+    "lastCharged": null
+  },
+  "cpuTemp": 0,
+  "image": null,
+  "waypoints": [],
+  "startAt": {
+    "$date": "2025-02-21T00:59:20.334Z"
+  },
+  "IsActive": false,
+  "IsDeleted": false,
+  "DeletedAt": null,
+  "lastActive": {
+    "$date": "2025-02-21T00:59:20.334Z"
+  },
+  "createdAt": {
+    "$date": "2025-02-21T00:59:20.334Z"
+  },
+  "updatedAt": null
+},
+{
+  "_id": {
+    "$oid": "67b752daeb379c6454785439"
+  },
+  "seq": 7,
+  "manufactureName": "robot_07",
+  "nickname": "1F-103",
+  "sensorName": "sensor_07",
+  "ipAddress": "123.132.13.3",
+  "networkStatus": "connected",
+  "status": "waiting",
+  "networkHealth": 0,
+  "position": {
+    "x": 0,
+    "y": 0,
+    "z": 0,
+    "orientation": 0
+  },
+  "motion": {
+    "kph": 0,
+    "mps": 0
+  },
+  "battery": {
+    "level": 0,
+    "isCharging": false,
+    "lastCharged": null
+  },
+  "cpuTemp": 0,
+  "image": null,
+  "waypoints": [],
+  "startAt": {
+    "$date": "2025-02-21T01:05:46.344Z"
+  },
+  "IsActive": false,
+  "IsDeleted": false,
+  "DeletedAt": null,
+  "lastActive": {
+    "$date": "2025-02-21T01:05:46.344Z"
+  },
+  "createdAt": {
+    "$date": "2025-02-21T01:05:46.344Z"
+  },
+  "updatedAt": null
+},
+{
+  "_id": {
+    "$oid": "67b752e9eb379c645478543a"
+  },
+  "seq": 8,
+  "manufactureName": "robot_08",
+  "nickname": "1F-104",
+  "sensorName": "sensor_08",
+  "ipAddress": "124.134.21.4",
+  "networkStatus": "connected",
+  "status": "waiting",
+  "networkHealth": 0,
+  "position": {
+    "x": 0,
+    "y": 0,
+    "z": 0,
+    "orientation": 0
+  },
+  "motion": {
+    "kph": 0,
+    "mps": 0
+  },
+  "battery": {
+    "level": 0,
+    "isCharging": false,
+    "lastCharged": null
+  },
+  "cpuTemp": 0,
+  "image": null,
+  "waypoints": [],
+  "startAt": {
+    "$date": "2025-02-21T01:06:01.548Z"
+  },
+  "IsActive": false,
+  "IsDeleted": false,
+  "DeletedAt": null,
+  "lastActive": {
+    "$date": "2025-02-21T01:06:01.548Z"
+  },
+  "createdAt": {
+    "$date": "2025-02-21T01:06:01.548Z"
+  },
+  "updatedAt": null
+},
+{
+  "_id": {
+    "$oid": "67b7531ceb379c645478543b"
+  },
+  "seq": 9,
+  "manufactureName": "robot_09",
+  "nickname": "1F-105",
+  "sensorName": "sensor_09",
+  "ipAddress": "125.135.15.5",
+  "networkStatus": "connected",
+  "status": "waiting",
+  "networkHealth": 0,
+  "position": {
+    "x": 0,
+    "y": 0,
+    "z": 0,
+    "orientation": 0
+  },
+  "motion": {
+    "kph": 0,
+    "mps": 0
+  },
+  "battery": {
+    "level": 0,
+    "isCharging": false,
+    "lastCharged": null
+  },
+  "cpuTemp": 0,
+  "image": null,
+  "waypoints": [],
+  "startAt": {
+    "$date": "2025-02-21T01:06:52.998Z"
+  },
+  "IsActive": false,
+  "IsDeleted": false,
+  "DeletedAt": null,
+  "lastActive": {
+    "$date": "2025-02-21T01:06:52.998Z"
+  },
+  "createdAt": {
+    "$date": "2025-02-21T01:06:52.998Z"
+  },
+  "updatedAt": null
+},
+{
+  "_id": {
+    "$oid": "67b7537feb379c645478543c"
+  },
+  "seq": 10,
+  "manufactureName": "robot_10",
+  "nickname": "2F-211",
+  "sensorName": "sensor_10",
+  "ipAddress": "211.123.11.2",
+  "networkStatus": "connected",
+  "status": "waiting",
+  "networkHealth": 0,
+  "position": {
+    "x": 0,
+    "y": 0,
+    "z": 0,
+    "orientation": 0
+  },
+  "motion": {
+    "kph": 0,
+    "mps": 0
+  },
+  "battery": {
+    "level": 0,
+    "isCharging": false,
+    "lastCharged": null
+  },
+  "cpuTemp": 0,
+  "image": null,
+  "waypoints": [],
+  "startAt": {
+    "$date": "2025-02-21T01:08:31.973Z"
+  },
+  "IsActive": false,
+  "IsDeleted": false,
+  "DeletedAt": null,
+  "lastActive": {
+    "$date": "2025-02-21T01:08:31.973Z"
+  },
+  "createdAt": {
+    "$date": "2025-02-21T01:08:31.973Z"
+  },
+  "updatedAt": null
+},
+{
+  "_id": {
+    "$oid": "67b7538feb379c645478543d"
+  },
+  "seq": 11,
+  "manufactureName": "robot_11",
+  "nickname": "2F-212",
+  "sensorName": "sensor_11",
+  "ipAddress": "212.121.12.1",
+  "networkStatus": "connected",
+  "status": "waiting",
+  "networkHealth": 0,
+  "position": {
+    "x": 0,
+    "y": 0,
+    "z": 0,
+    "orientation": 0
+  },
+  "motion": {
+    "kph": 0,
+    "mps": 0
+  },
+  "battery": {
+    "level": 0,
+    "isCharging": false,
+    "lastCharged": null
+  },
+  "cpuTemp": 0,
+  "image": null,
+  "waypoints": [],
+  "startAt": {
+    "$date": "2025-02-21T01:08:47.931Z"
+  },
+  "IsActive": false,
+  "IsDeleted": false,
+  "DeletedAt": null,
+  "lastActive": {
+    "$date": "2025-02-21T01:08:47.931Z"
+  },
+  "createdAt": {
+    "$date": "2025-02-21T01:08:47.931Z"
+  },
+  "updatedAt": null
+},
+{
+  "_id": {
+    "$oid": "67b7539feb379c645478543e"
+  },
+  "seq": 12,
+  "manufactureName": "robot_12",
+  "nickname": "2F-213",
+  "sensorName": "sensor_12",
+  "ipAddress": "213.132.13.3",
+  "networkStatus": "connected",
+  "status": "waiting",
+  "networkHealth": 0,
+  "position": {
+    "x": 0,
+    "y": 0,
+    "z": 0,
+    "orientation": 0
+  },
+  "motion": {
+    "kph": 0,
+    "mps": 0
+  },
+  "battery": {
+    "level": 0,
+    "isCharging": false,
+    "lastCharged": null
+  },
+  "cpuTemp": 0,
+  "image": null,
+  "waypoints": [],
+  "startAt": {
+    "$date": "2025-02-21T01:09:03.329Z"
+  },
+  "IsActive": false,
+  "IsDeleted": false,
+  "DeletedAt": null,
+  "lastActive": {
+    "$date": "2025-02-21T01:09:03.329Z"
+  },
+  "createdAt": {
+    "$date": "2025-02-21T01:09:03.329Z"
+  },
+  "updatedAt": null
+},
+{
+  "_id": {
+    "$oid": "67b753b1eb379c645478543f"
+  },
+  "seq": 13,
+  "manufactureName": "robot_13",
+  "nickname": "2F-214",
+  "sensorName": "sensor_13",
+  "ipAddress": "214.124.14.4",
+  "networkStatus": "connected",
+  "status": "waiting",
+  "networkHealth": 0,
+  "position": {
+    "x": 0,
+    "y": 0,
+    "z": 0,
+    "orientation": 0
+  },
+  "motion": {
+    "kph": 0,
+    "mps": 0
+  },
+  "battery": {
+    "level": 0,
+    "isCharging": false,
+    "lastCharged": null
+  },
+  "cpuTemp": 0,
+  "image": null,
+  "waypoints": [],
+  "startAt": {
+    "$date": "2025-02-21T01:09:21.779Z"
+  },
+  "IsActive": false,
+  "IsDeleted": false,
+  "DeletedAt": null,
+  "lastActive": {
+    "$date": "2025-02-21T01:09:21.779Z"
+  },
+  "createdAt": {
+    "$date": "2025-02-21T01:09:21.779Z"
+  },
+  "updatedAt": null
+},
+{
+  "_id": {
+    "$oid": "67b753c0eb379c6454785440"
+  },
+  "seq": 14,
+  "manufactureName": "robot_14",
+  "nickname": "2F-215",
+  "sensorName": "sensor_14",
+  "ipAddress": "215.152.13.5",
+  "networkStatus": "connected",
+  "status": "waiting",
+  "networkHealth": 0,
+  "position": {
+    "x": 0,
+    "y": 0,
+    "z": 0,
+    "orientation": 0
+  },
+  "motion": {
+    "kph": 0,
+    "mps": 0
+  },
+  "battery": {
+    "level": 0,
+    "isCharging": false,
+    "lastCharged": null
+  },
+  "cpuTemp": 0,
+  "image": null,
+  "waypoints": [],
+  "startAt": {
+    "$date": "2025-02-21T01:09:36.692Z"
+  },
+  "IsActive": false,
+  "IsDeleted": false,
+  "DeletedAt": null,
+  "lastActive": {
+    "$date": "2025-02-21T01:09:36.692Z"
+  },
+  "createdAt": {
+    "$date": "2025-02-21T01:09:36.692Z"
+  },
+  "updatedAt": null
+},
+{
+  "_id": {
+    "$oid": "67b753d5eb379c6454785441"
+  },
+  "seq": 15,
+  "manufactureName": "robot_15",
+  "nickname": "3F-311",
+  "sensorName": "sensor_15",
+  "ipAddress": "131.213.11.1",
+  "networkStatus": "connected",
+  "status": "waiting",
+  "networkHealth": 0,
+  "position": {
+    "x": 0,
+    "y": 0,
+    "z": 0,
+    "orientation": 0
+  },
+  "motion": {
+    "kph": 0,
+    "mps": 0
+  },
+  "battery": {
+    "level": 0,
+    "isCharging": false,
+    "lastCharged": null
+  },
+  "cpuTemp": 0,
+  "image": null,
+  "waypoints": [],
+  "startAt": {
+    "$date": "2025-02-21T01:09:57.874Z"
+  },
+  "IsActive": false,
+  "IsDeleted": false,
+  "DeletedAt": null,
+  "lastActive": {
+    "$date": "2025-02-21T01:09:57.874Z"
+  },
+  "createdAt": {
+    "$date": "2025-02-21T01:09:57.874Z"
+  },
+  "updatedAt": null
+},
+{
+  "_id": {
+    "$oid": "67b753e6eb379c6454785442"
+  },
+  "seq": 16,
+  "manufactureName": "robot_16",
+  "nickname": "3F-312",
+  "sensorName": "sensor_16",
+  "ipAddress": "132.231.23.2",
+  "networkStatus": "connected",
+  "status": "waiting",
+  "networkHealth": 0,
+  "position": {
+    "x": 0,
+    "y": 0,
+    "z": 0,
+    "orientation": 0
+  },
+  "motion": {
+    "kph": 0,
+    "mps": 0
+  },
+  "battery": {
+    "level": 0,
+    "isCharging": false,
+    "lastCharged": null
+  },
+  "cpuTemp": 0,
+  "image": null,
+  "waypoints": [],
+  "startAt": {
+    "$date": "2025-02-21T01:10:14.734Z"
+  },
+  "IsActive": false,
+  "IsDeleted": false,
+  "DeletedAt": null,
+  "lastActive": {
+    "$date": "2025-02-21T01:10:14.734Z"
+  },
+  "createdAt": {
+    "$date": "2025-02-21T01:10:14.734Z"
+  },
+  "updatedAt": null
+},
+{
+  "_id": {
+    "$oid": "67b753ffeb379c6454785443"
+  },
+  "seq": 17,
+  "manufactureName": "robot_17",
+  "nickname": "3F-313",
+  "sensorName": "sensor_17",
+  "ipAddress": "133.213.23.3",
+  "networkStatus": "connected",
+  "status": "waiting",
+  "networkHealth": 0,
+  "position": {
+    "x": 0,
+    "y": 0,
+    "z": 0,
+    "orientation": 0
+  },
+  "motion": {
+    "kph": 0,
+    "mps": 0
+  },
+  "battery": {
+    "level": 0,
+    "isCharging": false,
+    "lastCharged": null
+  },
+  "cpuTemp": 0,
+  "image": null,
+  "waypoints": [],
+  "startAt": {
+    "$date": "2025-02-21T01:10:39.699Z"
+  },
+  "IsActive": false,
+  "IsDeleted": false,
+  "DeletedAt": null,
+  "lastActive": {
+    "$date": "2025-02-21T01:10:39.699Z"
+  },
+  "createdAt": {
+    "$date": "2025-02-21T01:10:39.699Z"
+  },
+  "updatedAt": null
+},
+{
+  "_id": {
+    "$oid": "67b7540feb379c6454785444"
+  },
+  "seq": 18,
+  "manufactureName": "robot_18",
+  "nickname": "3F-314",
+  "sensorName": "sensor_18",
+  "ipAddress": "134.231.14.4",
+  "networkStatus": "connected",
+  "status": "waiting",
+  "networkHealth": 0,
+  "position": {
+    "x": 0,
+    "y": 0,
+    "z": 0,
+    "orientation": 0
+  },
+  "motion": {
+    "kph": 0,
+    "mps": 0
+  },
+  "battery": {
+    "level": 0,
+    "isCharging": false,
+    "lastCharged": null
+  },
+  "cpuTemp": 0,
+  "image": null,
+  "waypoints": [],
+  "startAt": {
+    "$date": "2025-02-21T01:10:55.043Z"
+  },
+  "IsActive": false,
+  "IsDeleted": false,
+  "DeletedAt": null,
+  "lastActive": {
+    "$date": "2025-02-21T01:10:55.043Z"
+  },
+  "createdAt": {
+    "$date": "2025-02-21T01:10:55.043Z"
+  },
+  "updatedAt": null
+},
+{
+  "_id": {
+    "$oid": "67b7541ceb379c6454785445"
+  },
+  "seq": 19,
+  "manufactureName": "robot_19",
+  "nickname": "4F-411",
+  "sensorName": "sensor_19",
+  "ipAddress": "141.214.21.1",
+  "networkStatus": "connected",
+  "status": "waiting",
+  "networkHealth": 0,
+  "position": {
+    "x": 0,
+    "y": 0,
+    "z": 0,
+    "orientation": 0
+  },
+  "motion": {
+    "kph": 0,
+    "mps": 0
+  },
+  "battery": {
+    "level": 0,
+    "isCharging": false,
+    "lastCharged": null
+  },
+  "cpuTemp": 0,
+  "image": null,
+  "waypoints": [],
+  "startAt": {
+    "$date": "2025-02-21T01:11:08.272Z"
+  },
+  "IsActive": false,
+  "IsDeleted": false,
+  "DeletedAt": null,
+  "lastActive": {
+    "$date": "2025-02-21T01:11:08.272Z"
+  },
+  "createdAt": {
+    "$date": "2025-02-21T01:11:08.272Z"
+  },
+  "updatedAt": null
+},
+{
+  "_id": {
+    "$oid": "67b7542beb379c6454785446"
+  },
+  "seq": 20,
+  "manufactureName": "robot_20",
+  "nickname": "4F-412",
+  "sensorName": "sensor_20",
+  "ipAddress": "124.214.42.2",
+  "networkStatus": "connected",
+  "status": "waiting",
+  "networkHealth": 0,
+  "position": {
+    "x": 0,
+    "y": 0,
+    "z": 0,
+    "orientation": 0
+  },
+  "motion": {
+    "kph": 0,
+    "mps": 0
+  },
+  "battery": {
+    "level": 0,
+    "isCharging": false,
+    "lastCharged": null
+  },
+  "cpuTemp": 0,
+  "image": null,
+  "waypoints": [],
+  "startAt": {
+    "$date": "2025-02-21T01:11:23.318Z"
+  },
+  "IsActive": false,
+  "IsDeleted": false,
+  "DeletedAt": null,
+  "lastActive": {
+    "$date": "2025-02-21T01:11:23.318Z"
+  },
+  "createdAt": {
+    "$date": "2025-02-21T01:11:23.318Z"
+  },
+  "updatedAt": null
+}]

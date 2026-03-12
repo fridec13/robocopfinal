@@ -4,6 +4,9 @@ import axios from 'axios'
 
 export const useRobotsStore = defineStore('robots', () => {
   const robots = ref([])
+  // SSE? ??? ??? ??? (??? ?? ????? ??)
+  const liveStatus = ref({})  // { [seq]: { status, battery, networkHealth, cpuTemp, startAt, isActive, position } }
+  const statusSSEs = {}       // ?? ?? SSE ?? ??
   const showRobotManagementModal = ref(false)
   const showNicknameModal = ref(false)
   const selectedRobotForNickname = ref(null)
@@ -14,37 +17,43 @@ export const useRobotsStore = defineStore('robots', () => {
     ipAddress: '',
   })
   const savedRobot = localStorage.getItem('selectedRobot')
-  const selectedRobot = ref(savedRobot ? parseInt(savedRobot, 10) : 0)  // localStorage?ì„œ ê°€?¸ì˜¨ ë¬¸ìž?´ì„ parseIntë¡?ë³€??
+  const selectedRobot = ref(savedRobot ? parseInt(savedRobot, 10) : 0)  // localStorage??? ???? ????? parseInt?????
   let pollingInterval = null
   const POLLING_INTERVAL = 500
- // localStorage?€ ?°ë™?˜ëŠ” ?¬ì´?œë°” ?íƒœ
+ // localStorage?? ?????? ?????? ???
   const storedLeftState = localStorage.getItem("left-sidebar-collapsed");
   const leftSidebarCollapsed = ref(storedLeftState === "true");
-  // App.vue??? ê? ?¨ìˆ˜?€ ?°ë™
+  // App.vue?????? ????? ???
   const updateSidebarStates = (left) => {
     leftSidebarCollapsed.value = left;
   };
 
-  // ë¡œë´‡ ë¦¬ìŠ¤??ë¶ˆëŸ¬?¤ê¸°
+  // ?? ?????????
   const loadRobots = async () => {
     try {
       const res = await axios.get('/api/v1/robots/')
       if (res.data?.data && Array.isArray(res.data.data)) {
         robots.value = res.data.data.map(mapRobotData)
       } else {
-        console.error('?ˆìƒì¹?ëª»í•œ ?°ì´??êµ¬ì¡°:', res.data)
+        console.error('??????? ???????:', res.data)
         robots.value = []
       }
     } catch (err) {
-      console.error('ë¡œë´‡ ?°ì´??ë¡œë“œ ?ëŸ¬:', err)
+      console.error('?? ??????? ???:', err)
       robots.value = []
     }
   }
 
-  // ?¹ì†Œì¼??°ì´?°ì? DB ?°ì´??ë³‘í•©
-  const displayRobots = computed(() => robots.value)
+  // ???????????? DB ???????
+  // DB ??? + SSE ??? ??? ?? (SSE ??)
+  const displayRobots = computed(() =>
+    robots.value.map(robot => ({
+      ...robot,
+      ...(liveStatus.value[robot.seq] || {})
+    }))
+  )
 
-  // API ?´ë§ ê´€??
+  // API ??? ???
   const startPolling = () => {
     if (pollingInterval) {
       stopPolling()
@@ -57,11 +66,11 @@ export const useRobotsStore = defineStore('robots', () => {
         const res = await axios.get('/api/v1/robots/')
         if (res.data?.data && Array.isArray(res.data.data)) {
           robots.value = res.data.data.map(mapRobotData)
-        } else {
-          console.error('?ˆìƒì¹?ëª»í•œ ?°ì´??êµ¬ì¡°:', res.data)
+          // ?? ?? ?? SSE ?? ??
+          robots.value.forEach(r => { if (r.isActive) setupGlobalStatusSSE(r.seq) })
         }
       } catch (error) {
-        console.error('?´ë§ ?ëŸ¬:', error)
+        console.error('?? ??:', error)
       }
     }, POLLING_INTERVAL)
   }
@@ -73,13 +82,13 @@ export const useRobotsStore = defineStore('robots', () => {
     }
   }  
 
-    // ê³µí†µ ë§¤í•‘ ?¨ìˆ˜ ì¶”ê?
+    // ?? ?? ??? ???
     const mapRobotData = (robot) => ({
       seq: robot.seq,
       manufactureName: robot.manufactureName,
       nickname: robot.nickname || '',
       sensorName: robot.sensorName || '',
-      ipAddress: robot.ipAddress || '?????†ìŒ',
+      ipAddress: robot.ipAddress || '???????',
       networkStatus: robot.networkStatus || 'disconnected',
       status: robot.status || 'waiting',
       networkHealth: robot.networkHealth || 100,
@@ -101,7 +110,7 @@ export const useRobotsStore = defineStore('robots', () => {
       updatedAt: robot.updatedAt || new Date().toISOString()
     })
 
-  // ë¡œë´‡ ?‰ë„¤???¤ì •
+  // ?? ????????
   const openNicknameModal = (robot) => {
     selectedRobotForNickname.value = robot
     showNicknameModal.value = true
@@ -112,7 +121,7 @@ export const useRobotsStore = defineStore('robots', () => {
     selectedRobotForNickname.value = null
   }
 
-  // ë¡œë´‡ ? íƒ ì²˜ë¦¬ ??ë¡œì»¬ ?¤í† ë¦¬ì? ?€??
+  // ?? ??? ?? ???? ?????? ????
   const handleRobotSelection = () => {
     if (selectedRobot.value !== 0) {
       localStorage.setItem('selectedRobot', String(selectedRobot.value))
@@ -134,7 +143,7 @@ export const useRobotsStore = defineStore('robots', () => {
         robots.value.push({
           seq: registeredRobot.seq,
           manufactureName: registeredRobot.manufactureName,
-          nickname: registeredRobot.nickname,   // ì£¼ì˜: robot -> registeredRobot
+          nickname: registeredRobot.nickname,   // ??: robot -> registeredRobot
           ipAddress: registeredRobot.ipAddress,
           sensorName: registeredRobot.sensorName || '',
           status: registeredRobot.status || 'waiting',
@@ -144,39 +153,39 @@ export const useRobotsStore = defineStore('robots', () => {
           networkHealth: registeredRobot.networkHealth || 100,
           position: registeredRobot.position
             ? `x: ${registeredRobot.position.x}, y: ${registeredRobot.position.y}`
-            : '?????†ìŒ',
-          orientation: registeredRobot.position?.orientation || '?????†ìŒ',
+            : '???????',
+          orientation: registeredRobot.position?.orientation || '???????',
           motion: registeredRobot.motion 
           ? `kph: ${registeredRobot.motion.kph}, mps: ${registeredRobot.motion.mps}`
-          : '?????†ìŒ',
+          : '???????',
           cpuTemp: registeredRobot.cpuTemp || 0.0,
           waypoints : registeredRobot.waypoints || [],
           imageUrl: registeredRobot.image?.url || '',
-          startAt: registeredRobot.startAt || '?????†ìŒ',
-          lastActive: registeredRobot.lastActive || '?????†ìŒ',
+          startAt: registeredRobot.startAt || '???????',
+          lastActive: registeredRobot.lastActive || '???????',
           isActive: registeredRobot.IsActive || false
         })
 
         closeModal()
-        alert('ë¡œë´‡ ?±ë¡ ?±ê³µ')
+        alert('?? ??? ???')
       })
       .catch((err) => {
-        console.error('ë¡œë´‡ ?±ë¡ ?¤íŒ¨:', err)
-        alert('ë¡œë´‡ ?±ë¡???¤íŒ¨?ˆìŠµ?ˆë‹¤.')
+        console.error('?? ??? ???:', err)
+        alert('?? ??????????????.')
       })
   }
 
-  // ë¡œë´‡ ê´€ë¦?ëª¨ë‹¬ ?´ê¸°/?«ê¸°
+  // ?? ????? ???/???
   const openRobotManagementModal = () => { showRobotManagementModal.value = true }
   const closeRobotManagementModal = () => { showRobotManagementModal.value = false }
 
-  // ë¡œë´‡ ?±ë¡ ëª¨ë‹¬ ?´ê¸° (ë¡œë´‡ ê´€ë¦?ëª¨ë‹¬???«ê³  ?´ê¸°)
+  // ?? ??? ?? ??? (?? ?????????? ???)
   const openAddRobotModal = () => {
     showRobotManagementModal.value = false
     showModal.value = true
   }
 
-  // ë¡œë´‡ ?±ë¡ ëª¨ë‹¬ ?«ê¸°
+  // ?? ??? ?? ???
   const closeModal = () => {
     showModal.value = false
     newRobot.value = {
@@ -186,23 +195,43 @@ export const useRobotsStore = defineStore('robots', () => {
   }
 
 const updateRobotPosition = (seq, position) => {
-  const robotIndex = robots.value.findIndex(r => r.seq === seq);
-  if (robotIndex !== -1) {
-    robots.value[robotIndex] = {
-      ...robots.value[robotIndex],
-      position: {
-        x: position.x,
-        y: position.y,
-      }
-    };
+  liveStatus.value = {
+    ...liveStatus.value,
+    [seq]: { ...(liveStatus.value[seq] || {}), position: { x: position.x, y: position.y } }
   }
 }
 
 const updateRobotStatus = (seq, statusData) => {
-  const robot = robots.value.find(r => r.seq === seq);
-  if (robot) {
-    Object.assign(robot, statusData);
+  liveStatus.value = {
+    ...liveStatus.value,
+    [seq]: { ...(liveStatus.value[seq] || {}), ...statusData }
   }
+}
+
+// ?? ?? SSE - ??/?? ?? ?????? ??? ??
+const setupGlobalStatusSSE = (seq) => {
+  if (statusSSEs[seq]) return
+  const es = new EventSource(`/api/v1/robots/sse/${seq}/status`)
+  es.onmessage = (event) => {
+    try {
+      const data = JSON.parse(event.data)
+      if (data.status && Object.keys(data.status).length > 0) {
+        updateRobotStatus(seq, {
+          status:        data.status.status,
+          battery:       data.status.battery,
+          networkHealth: data.status.networkHealth,
+          cpuTemp:       data.status.cpuTemp,
+          startAt:       data.status.startAt,
+          isActive:      data.status.isActive,
+        })
+      }
+    } catch {}
+  }
+  es.onerror = () => {
+    es.close()
+    delete statusSSEs[seq]
+  }
+  statusSSEs[seq] = es
 }
 
   return {
@@ -210,7 +239,7 @@ const updateRobotStatus = (seq, statusData) => {
     showModal,
     showRobotManagementModal,
     newRobot,
-    // ?«ìžë¡?ê´€ë¦¬ë˜??selectedRobot
+    // ??????????selectedRobot
     selectedRobot,
     showNicknameModal,
     selectedRobotForNickname,
@@ -220,6 +249,8 @@ const updateRobotStatus = (seq, statusData) => {
 
     // methods
     updateRobotPosition,
+    updateRobotStatus,
+    setupGlobalStatusSSE,
     updateSidebarStates,
     openNicknameModal,
     closeNicknameModal,
@@ -232,6 +263,5 @@ const updateRobotStatus = (seq, statusData) => {
     handleAddRobot,
     startPolling,
     stopPolling,
-    updateRobotStatus
   }
 })

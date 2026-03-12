@@ -357,6 +357,12 @@ async def get_robot_status_sse(seq: int, request: Request):
         robot_service_instance = await RobotService.get_instance(seq)
         robot_repo = robot_service_instance.repository
 
+        # ROS /robot_{seq}/status 구독 시작 (이미 구독 중이면 무시)
+        try:
+            await robot_service_instance.subscribe_robot_status(seq)
+        except Exception as e:
+            logger.warning(f"[robot {seq}] status 구독 실패 (DB fallback 사용): {e}")
+
         async def event_generator():
             yield f"data: {json.dumps({'seq': seq, 'status': {}})}\n\n"
             while True:
@@ -387,7 +393,7 @@ async def get_robot_status_sse(seq: int, request: Request):
                         payload = {"seq": seq, "status": {}}
 
                 yield f"data: {json.dumps(payload)}\n\n"
-                await asyncio.sleep(2.0)
+                await asyncio.sleep(0.5)
 
         return StreamingResponse(event_generator(), media_type="text/event-stream")
     except Exception as e:

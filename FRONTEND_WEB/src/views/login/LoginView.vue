@@ -29,6 +29,12 @@
             class="w-full p-3 mb-4 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-gray-500">
 
           <button type="submit" class="w-full p-3 bg-black text-white rounded hover:bg-gray-700">로그인</button>
+
+          <div class="mt-4 p-3 bg-gray-50 rounded border border-gray-200 text-sm text-gray-500">
+            <p class="font-medium text-gray-600 mb-1">데모 계정</p>
+            <p>아이디: <span class="font-mono font-semibold text-gray-700">admin</span></p>
+            <p>비밀번호: <span class="font-mono font-semibold text-gray-700">admin1234</span></p>
+          </div>
         </div>
       </form>
     </div>

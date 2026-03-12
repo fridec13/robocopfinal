@@ -36,7 +36,7 @@ import SelectedNodes from '@/components/map/SelectedNodes.vue'
 import { useRobotsStore } from '@/stores/robots'
 import { useRobotCommandsStore } from '@/stores/robotCommands'
 
-// Store ????
+// Store
 const robotsStore = useRobotsStore()
 const robotCommandsStore = useRobotCommandsStore()
 const emit = defineEmits(['selectedNodesChange'])
@@ -177,6 +177,8 @@ function setupSSE() {
             !isNaN(data.position.x) && !isNaN(data.position.y)) {
           robotPositions.value.set(robot.seq, { x: data.position.x, y: data.position.y })
           map3dRef.value?.updatePosition(robot.seq, data.position.x, data.position.y)
+          // 로봇 목록 위치 표시 업데이트
+          robotsStore.updateRobotPosition(robot.seq, { x: data.position.x, y: data.position.y })
           lastUpdate = now
         }
       } catch (e) {

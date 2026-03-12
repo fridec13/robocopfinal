@@ -721,6 +721,45 @@ class RobotService:
         except Exception as e:
             logger.error(f"Error processing down_utm message: {str(e)}")
             
+    async def subscribe_robot_status(self, seq: int) -> None:
+        """
+        /robot_{seq}/status 토픽을 구독합니다.
+        robot_custom_interfaces/msg/Status 메시지를 수신해 last_status에 저장합니다.
+        """
+        topic_name = f"/robot_{seq}/status"
+        msg_type = "robot_custom_interfaces/msg/Status"
+
+        if topic_name in self.topics:
+            return
+
+        try:
+            if not self.ros_bridge.is_connected:
+                await self.ros_bridge.connect()
+            await self.ros_bridge.subscribe(topic_name, msg_type, self._on_status_message)
+            self.topics[topic_name] = topic_name
+            logger.info(f"[robot {seq}] status 토픽 구독: {topic_name}")
+        except Exception as e:
+            logger.error(f"[robot {seq}] status 구독 실패: {str(e)}")
+            raise
+
+    def _on_status_message(self, message: dict) -> None:
+        """
+        /robot_{seq}/status 콜백 — last_status를 SSE 포맷으로 저장합니다.
+        Status.msg 필드: mode, battery, temperatures, network, starttime, is_active
+        """
+        try:
+            self.last_status = {
+                "status":        message.get("mode", "waiting"),
+                "battery":       {"level": round(message.get("battery", 0.0), 1),
+                                  "isCharging": False},
+                "networkHealth": round(message.get("network", 100.0), 1),
+                "cpuTemp":       round(message.get("temperatures", 0.0), 1),
+                "startAt":       message.get("starttime", None),
+                "isActive":      message.get("is_active", True),
+            }
+        except Exception as e:
+            logger.error(f"status 메시지 처리 오류: {str(e)}")
+
     async def subscribe_alert(self, seq: int) -> None:
         """
         /robot_{seq}/ai_info 토픽을 구독합니다.

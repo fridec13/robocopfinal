@@ -19,8 +19,9 @@
           { 'opacity-40': !isActive(robot), 'hover:shadow-lg': isActive(robot) }
         ]"
       >
-        <!-- 닫기 버튼 -->
+        <!-- 닫기 버튼 (비활성 로봇만) -->
         <button
+          v-if="!isActive(robot)"
           class="absolute top-2 right-2 text-gray-500 hover:text-gray-600 z-10"
           @click="hideRobot(robot.seq)"
         >×</button>
@@ -49,6 +50,13 @@
         </div>
 
         <div class="space-y-2 mt-4">
+          <!-- 모드 -->
+          <div class="flex items-center justify-between">
+            <span class="text-sm text-gray-600">모드</span>
+            <span :class="['text-xs font-semibold px-2 py-0.5 rounded-full', modeClass(robot.status)]">
+              {{ modeLabel(robot.status) }}
+            </span>
+          </div>
           <div>
             <span class="text-sm text-gray-600">배터리</span>
             <div class="relative w-full h-4 bg-gray-200 rounded overflow-hidden">
@@ -64,14 +72,8 @@
           </div>
           <div>
             <span class="text-sm text-gray-600">현재 위치</span>
-            <span class="block text-gray-800 font-medium">
-              {{ robot.position ? `x: ${formatCoordinate(robot.position.x)}, y: ${formatCoordinate(robot.position.y)}` : '데이터 없음' }}
-            </span>
-          </div>
-          <div>
-            <span class="text-sm text-gray-600">가동 시간</span>
-            <span class="block text-gray-800 font-medium">
-              {{ getOperationTime(robot.startAt, robot.isActive || robot.IsActive) }}
+            <span class="block text-gray-800 font-medium text-xs">
+              {{ formatPosition(robot.position) }}
             </span>
           </div>
         </div>
@@ -141,7 +143,15 @@ const getOperationTime = (startTime, isActive) => {
   return `${String(hours).padStart(2, '0')}시간 ${String(minutes).padStart(2, '0')}분`;
 };
 
-const formatCoordinate = (value) => value ? Number(value).toFixed(2) : '0.00';
+// UTM → Gazebo 로컬 좌표 (미터)로 변환하여 표시
+const UTM_ORIGIN_X = 304411.645
+const UTM_ORIGIN_Y = 3892836.76
+const formatPosition = (pos) => {
+  if (!pos || (pos.x === 0 && pos.y === 0)) return '위치 없음'
+  const lx = (pos.x - UTM_ORIGIN_X).toFixed(1)
+  const ly = (pos.y - UTM_ORIGIN_Y).toFixed(1)
+  return `x: ${lx}m, y: ${ly}m`
+};
 
 const returnRobot = async (robotSeq) => {
   if (!robotSeq) return;
@@ -179,4 +189,29 @@ const goToDetailPage = (robotSeq) => router.push(`/${robotSeq}`);
 
 const isActive = (robot) =>
   robot.isActive === true || robot.IsActive === true;
+
+const MODE_LABELS = {
+  waiting:        '대기 중',
+  homing:         '복귀 중',
+  navigate:       '이동 중',
+  navigating:     '이동 중',
+  patrol:         '순찰 중',
+  patrolling:     '순찰 중',
+  manual:         '수동 조작',
+  'temp stop':    '일시 정지',
+  'emergency stop': '비상 정지',
+}
+const MODE_COLORS = {
+  waiting:        'bg-gray-100 text-gray-600',
+  homing:         'bg-blue-100 text-blue-700',
+  navigate:       'bg-green-100 text-green-700',
+  navigating:     'bg-green-100 text-green-700',
+  patrol:         'bg-emerald-100 text-emerald-700',
+  patrolling:     'bg-emerald-100 text-emerald-700',
+  manual:         'bg-yellow-100 text-yellow-700',
+  'temp stop':    'bg-orange-100 text-orange-700',
+  'emergency stop': 'bg-red-100 text-red-700',
+}
+const modeLabel = (status) => MODE_LABELS[status] ?? (status || '알 수 없음')
+const modeClass = (status) => MODE_COLORS[status] ?? 'bg-gray-100 text-gray-500'
 </script>

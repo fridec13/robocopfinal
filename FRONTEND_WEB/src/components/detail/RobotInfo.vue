@@ -6,7 +6,6 @@
       <p><strong>배터리:</strong> {{ currentRobot?.battery?.level ?? robot.battery?.level }}%</p>
       <p><strong>네트워크 상태:</strong> {{ Math.floor(currentRobot?.networkHealth ?? robot.networkHealth ?? 0) }}% ({{ currentRobot?.networkStatus || robot.networkStatus }})</p>
       <p><strong>CPU 온도:</strong> {{ robot.cpuTemp }}°C</p>
-      <p><strong>가동 시간:</strong> {{ getOperationTime(currentRobot?.startAt || robot.startAt, currentRobot?.isActive ?? robot.isActive) }}</p>
     </div>
     <hr class="border-gray-300 my-4">
 
@@ -33,7 +32,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { ref, computed } from 'vue';
 import LidarViewer from './LidarViewer.vue';
 import { useRobotsStore } from '@/stores/robots';
 
@@ -69,47 +68,5 @@ const getOperationTime = (startTime, isActive) => {
   return `${String(hours).padStart(2, '0')}시간 ${String(minutes).padStart(2, '0')}분`;
 };
 
-const statusSSEConnection = ref(null);
-
-const setupStatusSSE = (seq) => {
-  if (!seq) return;
-  const eventSource = new EventSource(`/api/v1/robots/sse/${seq}/status`);
-
-  eventSource.onmessage = (event) => {
-    try {
-      const data = JSON.parse(event.data);
-      if (data.status && Object.keys(data.status).length > 0) {
-        robotsStore.updateRobotStatus(seq, {
-          status: data.status.status,
-          battery: data.status.battery,
-          networkHealth: data.status.networkHealth,
-          cpuTemp: data.status.cpuTemp,
-          startAt: data.status.startAt,
-          isActive: data.status.isActive
-        });
-      }
-    } catch (error) {
-      console.error('Status SSE 메시지 처리 오류:', error);
-    }
-  };
-
-  eventSource.onerror = (error) => {
-    console.error('Status SSE 연결 오류:', error);
-    eventSource.close();
-    statusSSEConnection.value = null;
-  };
-
-  statusSSEConnection.value = eventSource;
-};
-
-onMounted(() => {
-  if (props.robot?.seq) setupStatusSSE(props.robot.seq);
-});
-
-onUnmounted(() => {
-  if (statusSSEConnection.value) {
-    statusSSEConnection.value.close();
-    statusSSEConnection.value = null;
-  }
-});
+// 상태 SSE는 robots store에서 전역 관리 (setupGlobalStatusSSE)
 </script>

@@ -1,29 +1,16 @@
 <template>
-  <div class="flex flex-col bg-white">
+  <div class="flex flex-col bg-gray-900">
     <div class="flex-1 relative p-1">
-      <div class="relative w-full h-[450px] min-h-[20px] mx-auto bg-white" ref="containerRef">
-        <!-- 배경 지도 이미지: ECharts graphic 대신 CSS overlay로 안정적으로 표시 -->
-        <img
-          v-if="bgRect.width > 0"
-          src="/images/row-map.png"
-          class="absolute pointer-events-none select-none"
-          :style="{
-            left: bgRect.left + 'px',
-            top: bgRect.top + 'px',
-            width: bgRect.width + 'px',
-            height: bgRect.height + 'px',
-            opacity: 0.6,
-            zIndex: 0
-          }"
-        />
-        <v-chart
+      <div class="relative w-full h-[450px] min-h-[200px] mx-auto">
+        <!-- Three.js 3D 맵 뷰어 -->
+        <MapViewer3D
+          ref="map3dRef"
           class="absolute inset-0 w-full h-full"
-          :option="chartOption"
-          ref="chartRef"
-          autoresize
-          @click="handleNodeClick"
-          @finished="recalcBgRect"
-          style="background: transparent; z-index: 1"
+          :robot="props.robot"
+          :is-monitoring-mode="props.isMonitoringMode"
+          :map-nodes="mapData.nodes"
+          :map-links="mapData.links"
+          @node-click="handleNodeClick3D"
         />
       </div>
 
@@ -33,62 +20,33 @@
         @remove-node="handleNodeRemove"
       />
 
-      <div v-if="loading" class="absolute inset-0 flex flex-col items-center justify-center bg-white bg-opacity-90">
-        <div class="w-10 h-10 border-4 border-gray-300 border-t-blue-500 rounded-full animate-spin"></div>
-        <span class="mt-3 text-gray-700">????????? ????? ??..</span>
+      <div v-if="loading" class="absolute inset-0 flex flex-col items-center justify-center bg-gray-900 bg-opacity-90 z-20">
+        <div class="w-10 h-10 border-4 border-gray-600 border-t-blue-400 rounded-full animate-spin"></div>
+        <span class="mt-3 text-gray-300 text-sm">맵 데이터 불러오는 중...</span>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch, onUnmounted, nextTick } from 'vue'
+import { ref, computed, onMounted, watch, onUnmounted } from 'vue'
 import axios from 'axios'
-import { use } from 'echarts/core'
-import { CanvasRenderer } from 'echarts/renderers'
-import { GraphicComponent, GridComponent, TooltipComponent, ToolboxComponent } from 'echarts/components'
-import { ScatterChart, LinesChart } from 'echarts/charts'
-import VChart from 'vue-echarts'
+import MapViewer3D from '@/components/map/MapViewer3D.vue'
 import SelectedNodes from '@/components/map/SelectedNodes.vue'
 import { useRobotsStore } from '@/stores/robots'
 import { useRobotCommandsStore } from '@/stores/robotCommands'
-
-use([
-  CanvasRenderer,
-  GraphicComponent,
-  GridComponent,
-  TooltipComponent,
-  ToolboxComponent,
-  ScatterChart,
-  LinesChart
-])
 
 // Store ????
 const robotsStore = useRobotsStore()
 const robotCommandsStore = useRobotCommandsStore()
 const emit = defineEmits(['selectedNodesChange'])
 
-// map.png UTM extent (c101.world GPS origin + map.yaml 계산)
-// c101 GPS origin: lat=35.1595, lon=126.8526 → UTM(304411.646, 3892842.473)
-// map.yaml: origin=(-30,-30), resolution=0.05 m/px, size=1200×1200px → 60m×60m
-const MAP_UTM = {
-  xMin: 304381.65,
-  xMax: 304441.65,
-  yMin: 3892812.47,
-  yMax: 3892872.47,
-}
-
-// Refs ???
-const containerRef = ref(null)
-const chartRef = ref(null)
+// Refs
+const map3dRef = ref(null)
 const loading = ref(true)
 const mapData = ref({ nodes: [], links: [] })
 const selectedNodes = ref([])
-const imageWidth = ref(800)
-const imageHeight = ref(500)
-const robotPositions = ref(new Map()) // ??? ????????????????Map
-// 배경 이미지 CSS 위치 (convertToPixel 기반, ECharts graphic 대신 CSS overlay 사용)
-const bgRect = ref({ left: 0, top: 0, width: 0, height: 0 })
+const robotPositions = ref(new Map())
 
 // Props ???
 const props = defineProps({
@@ -111,28 +69,11 @@ const props = defineProps({
   }
 })
 
-// Robot colors for monitoring mode
-const robotColors = {
-  0: '#0000ff',
-  1: '#ffff00',
-  2: '#00ff00',
-  3: '#ff00ff',
-  4: '#ff0000'
-}
-
-// Computed ???
+// Computed
 const currentRobotSeq = computed(() => {
-  if (props.robot) {
-    return props.robot.seq
-  }
-
-  const selectedRobotSeq = robotsStore.selectedRobot
-  if (selectedRobotSeq) {
-    const selectedRobot = robotsStore.robots.find(
-      robot => robot.seq === selectedRobotSeq
-    )
-    return selectedRobot?.seq
-  }
+  if (props.robot) return props.robot.seq
+  const sel = robotsStore.selectedRobot
+  if (sel) return robotsStore.robots.find(r => r.seq === sel)?.seq
   return null
 })
 
@@ -143,276 +84,10 @@ const selectedNodesInfo = computed(() => {
   }))
 })
 
-// ?? ??? computed
-const chartOption = computed(() => {
-  const robotSeries = []
-  
-  // ?? ?? ??? ???
-  if (robotPositions.value) {
-    robotPositions.value.forEach((position, robotSeq) => {
-      // position??????? x, y?? ?? ??? ????? ??
-      if (position && 
-          position.x != null && 
-          position.y != null &&
-          !isNaN(position.x) && 
-          !isNaN(position.y)) {
-        const isSelectedRobot = !props.isMonitoringMode && robotSeq === currentRobotSeq.value;
-        
-        robotSeries.push({
-          type: 'scatter',
-          data: [[position.x, position.y]],
-          symbolSize: 15,
-          itemStyle: {
-            color: isSelectedRobot ? '#ff0000' : robotColors[robotSeq % Object.keys(robotColors).length]
-          },
-          symbol: 'circle',
-          zlevel: 3
-        });
-      }
-    });
-  }
-
-  return {
-    animation: false,
-    backgroundColor: 'transparent',
-    grid: {
-      left: '5%',
-      right: '5%',
-      top: '5%',
-      bottom: '5%',
-      containLabel: true
-    },
-    tooltip: {
-      show: true,
-      trigger: 'item',
-      confine: true,
-      enterable: false,
-      axisPointer: {
-        type: 'none'
-      },
-      formatter: function(params) {
-        // null check for params and data
-        if (!params || !params.data) return '';
-        
-        try {
-          // ?? ????? ??
-          if (params.seriesIndex < robotSeries.length && robotPositions.value) {
-            const robotSeqArray = Array.from(robotPositions.value.keys());
-            if (!robotSeqArray || robotSeqArray.length === 0) return '';
-            
-            const robotSeq = robotSeqArray[params.seriesIndex];
-            if (!robotSeq) return '';
-            
-            const robot = robotsStore.robots.find(r => r.seq === robotSeq);
-            return robot ? `??: ${robot.nickname || robot.manufactureName || robotSeq}` : '';
-          }
-          
-          // ??? ????? ?? - monitoring mode? ??? ??? ?? ???
-          if (!props.isMonitoringMode && params.componentSubType === 'scatter' && Array.isArray(params.data)) {
-            const x = Number(params.data[0]);
-            const y = Number(params.data[1]);
-            
-            if (isNaN(x) || isNaN(y)) return '';
-            return `??: (${x.toFixed(2)}, ${y.toFixed(2)})`;
-          }
-          
-          return '';
-        } catch (error) {
-          console.error('Tooltip formatter error:', error);
-          return '';
-        }
-      }
-    },
-    xAxis: {
-      type: 'value',
-      min: MAP_UTM.xMin,
-      max: MAP_UTM.xMax,
-      axisLine: { show: false },
-      splitLine: { show: false },
-      axisTick: { show: false },
-      axisLabel: { show: false }
-    },
-    yAxis: {
-      type: 'value',
-      min: MAP_UTM.yMin,
-      max: MAP_UTM.yMax,
-      axisLine: { show: false },
-      splitLine: { show: false },
-      axisTick: { show: false },
-      axisLabel: { show: false }
-    },
-    series: [
-      ...robotSeries,
-      {
-        type: 'lines',
-        coordinateSystem: 'cartesian2d',
-        data: (mapData.value.links || []).map(link => ({
-          coords: [
-            [link.source[0], link.source[1]],
-            [link.target[0], link.target[1]]
-          ]
-        })),
-        lineStyle: {
-          color: '#2196F3',
-          width: 2,
-          opacity: 0.8
-        },
-        zlevel: 1
-      },
-      {
-        type: 'scatter',
-        data: (mapData.value.nodes || []).map(node => [node.id[0], node.id[1]]),
-        symbolSize: (value) => {
-          return selectedNodes.value?.some(selected => 
-            selected.id[0] === value[0] && selected.id[1] === value[1]
-          ) ? 20 : 8
-        },
-        itemStyle: {
-          color: (params) => {
-            const node = mapData.value.nodes[params.dataIndex]
-            return selectedNodes.value?.some(selected => 
-              selected.id[0] === node.id[0] && selected.id[1] === node.id[1]
-            ) ? '#ff4081' : '#007bff'
-          }
-        },
-        label: {
-          show: true,
-          formatter: (params) => {
-            const node = mapData.value.nodes[params.dataIndex]
-            const index = selectedNodes.value?.findIndex(selected => 
-              selected.id[0] === node.id[0] && selected.id[1] === node.id[1]
-            )
-            return index !== -1 ? (index + 1).toString() : ''
-          },
-          color: '#fff',
-          fontSize: 12,
-          fontWeight: 'bold',
-          position: 'inside'
-        },
-        emphasis: {
-          scale: 1.5,
-          itemStyle: {
-            shadowBlur: 10,
-            shadowColor: 'rgba(0, 0, 0, 0.3)'
-          }
-        },
-        zlevel: 2
-      }
-    ]
-  }
-})
-
-function updateChartSeries() {
-  // Early return if required refs are not available
-  if (!chartRef.value || !mapData.value) {
-    console.warn('Chart reference or map data not available');
-    return;
-  }
-
-  const seriesData = [];
-
-  // Add lines series (paths between nodes)
-  if (mapData.value.links && Array.isArray(mapData.value.links)) {
-    seriesData.push({
-      type: 'lines',
-      coordinateSystem: 'cartesian2d',
-      data: mapData.value.links.map(link => ({
-        coords: [
-          [link.source[0], link.source[1]],
-          [link.target[0], link.target[1]]
-        ]
-      })),
-      lineStyle: {
-        color: '#2196F3',
-        width: 2,
-        opacity: 0.8
-      },
-      zlevel: 1
-    });
-  }
-
-  // Add nodes series (waypoints)
-  if (mapData.value.nodes && Array.isArray(mapData.value.nodes)) {
-    seriesData.push({
-      type: 'scatter',
-      data: mapData.value.nodes.map(node => [node.id[0], node.id[1]]),
-      symbolSize: (value) => {
-        return selectedNodes.value?.some(sel => 
-          sel.id[0] === value[0] && sel.id[1] === value[1]
-        ) ? 20 : 8;
-      },
-      itemStyle: {
-        color: (params) => {
-          const node = mapData.value.nodes[params.dataIndex];
-          return selectedNodes.value?.some(sel =>
-            sel.id[0] === node.id[0] && sel.id[1] === node.id[1]
-          ) ? '#ff4081' : '#007bff';
-        }
-      },
-      label: {
-        show: true,
-        formatter: (params) => {
-          const node = mapData.value.nodes[params.dataIndex];
-          const index = selectedNodes.value?.findIndex(sel => 
-            sel.id[0] === node.id[0] && sel.id[1] === node.id[1]
-          );
-          return index !== -1 ? (index + 1).toString() : '';
-        },
-        color: '#fff',
-        fontSize: 12,
-        fontWeight: 'bold',
-        position: 'inside'
-      },
-      emphasis: {
-        scale: 1.5,
-        itemStyle: {
-          shadowBlur: 10,
-          shadowColor: 'rgba(0, 0, 0, 0.3)'
-        }
-      },
-      zlevel: 2
-    });
-  }
-
-  // Add robot position series based on mode
-  robotPositions.value?.forEach((position, robotSeq) => {
-    if (position && 
-        typeof position.x === 'number' && 
-        typeof position.y === 'number' &&
-        !isNaN(position.x) && 
-        !isNaN(position.y)) {
-      const isSelectedRobot = !props.isMonitoringMode && robotSeq === currentRobotSeq.value;
-      
-      seriesData.push({
-        type: 'scatter',
-        data: [[position.x, position.y]],
-        symbolSize: 15,
-        itemStyle: {
-          color: isSelectedRobot ? '#ff0000' : robotColors[robotSeq % Object.keys(robotColors).length]
-        },
-        symbol: 'circle',
-        zlevel: 3,
-        tooltip: {
-          formatter: () => {
-            const robot = robotsStore.robots.find(r => r.seq === robotSeq);
-            return `??: ${robot?.nickname || robot?.manufactureName || robotSeq}`;
-          }
-        }
-      });
-    }
-  });
-
-  // Safely update chart options
-  try {
-    chartRef.value.setOption({
-      series: seriesData
-    }, { 
-      lazyUpdate: true,
-      silent: true // Suppress unnecessary warnings
-    });
-  } catch (error) {
-    console.error('Failed to update chart series:', error);
-  }
+// 3D 뷰어에 노드 클릭 전달
+function handleNodeClick3D(nodes) {
+  selectedNodes.value = nodes
+  emit('selectedNodesChange', selectedNodes.value)
 }
 
 // SSE ???
@@ -478,9 +153,8 @@ function setupSSE() {
 async function handleNavigate() {
   try {
     await robotCommandsStore.navigateCommand(selectedNodes.value, currentRobotSeq.value)
-    // ?? ??? ?????????? ????
     selectedNodes.value = []
-    updateChartSeries()
+    map3dRef.value?.resetNodeSelection()
     emit('selectedNodesChange', selectedNodes.value)
   } catch (error) {
     console.error('Navigation command failed:', error)
@@ -490,9 +164,8 @@ async function handleNavigate() {
 async function handlePatrol() {
   try {
     await robotCommandsStore.patrolCommand(selectedNodes.value, currentRobotSeq.value)
-    // ?? ??? ?????????? ????
     selectedNodes.value = []
-    updateChartSeries()
+    map3dRef.value?.resetNodeSelection()
     emit('selectedNodesChange', selectedNodes.value)
   } catch (error) {
     console.error('Patrol command failed:', error)
@@ -501,7 +174,7 @@ async function handlePatrol() {
 
 async function resetSelection() {
   selectedNodes.value = await robotCommandsStore.resetSelectionCommand(currentRobotSeq.value)
-  updateChartSeries()
+  map3dRef.value?.resetNodeSelection()
 }
 
 async function handleTempStop() {
@@ -512,155 +185,107 @@ async function handleResume() {
   await robotCommandsStore.resumeCommand(currentRobotSeq.value)
 }
 
-// ??? ??? ?????
-function handleNodeClick(params) {
-  // ????? ?????????? ??? ?????
-  if (props.isMonitoringMode) return
-  
-  if (params.componentSubType === 'scatter') {
-    const clickedNode = mapData.value.nodes[params.dataIndex]
-    if (!clickedNode) return
-
-    const index = selectedNodes.value.findIndex(n =>
-      n.id[0] === clickedNode.id[0] && n.id[1] === clickedNode.id[1]
-    )
-
-    if (index === -1) {
-      selectedNodes.value.push(clickedNode)
-    } else {
-      selectedNodes.value.splice(index, 1)
-    }
-
-    updateChartSeries()
-    emit('selectedNodesChange', selectedNodes.value)
-  }
-}
-
-// ??? ??? ?????
 const handleNodeRemove = ({ node }) => {
-  const index = selectedNodes.value.findIndex(n => 
+  const index = selectedNodes.value.findIndex(n =>
     n.id[0].toFixed(2) === node.x && n.id[1].toFixed(2) === node.y
   )
-  
   if (index !== -1) {
     selectedNodes.value = selectedNodes.value.filter((_, i) => i !== index)
-    updateChartSeries()
     emit('selectedNodesChange', selectedNodes.value)
   }
 }
 
-// 배경 이미지 위치를 UTM 좌표 기준으로 계산 (CSS overlay 방식)
-// ECharts graphic 대신 <img> div를 절대위치로 차트 뒤에 깔아 안정적으로 표시
-function recalcBgRect() {
-  if (!chartRef.value) return
-  nextTick(() => {
-    try {
-      const tl = chartRef.value.convertToPixel(
-        { xAxisIndex: 0, yAxisIndex: 0 },
-        [MAP_UTM.xMin, MAP_UTM.yMax]   // 좌상단
-      )
-      const br = chartRef.value.convertToPixel(
-        { xAxisIndex: 0, yAxisIndex: 0 },
-        [MAP_UTM.xMax, MAP_UTM.yMin]   // 우하단
-      )
-      if (!tl || !br || br[0] <= tl[0] || br[1] <= tl[1]) return
-      bgRect.value = {
-        left: tl[0],
-        top: tl[1],
-        width: br[0] - tl[0],
-        height: br[1] - tl[1]
-      }
-    } catch (e) {
-      console.warn('[RobotMap] recalcBgRect error:', e)
-    }
-  })
-}
-
-// ???????fetch
+// 맵 데이터 fetch
 async function fetchMapData() {
   try {
     loading.value = true
     const response = await axios.get('/api/v1/map')
     mapData.value = { nodes: response.data.nodes, links: response.data.links }
-    updateChartSeries()
   } catch (error) {
-    console.error('????????? ???:', error)
+    console.error('맵 데이터 로드 오류:', error)
   } finally {
     loading.value = false
   }
 }
 
+// SSE 설정
+function setupSSE() {
+  if (robotPositions.value) robotPositions.value.clear()
+  if (eventSources) {
+    eventSources.forEach(s => s.close())
+    eventSources.clear()
+  }
+
+  const newEventSources = new Map()
+  const activeRobots = robotsStore.robots
+    .filter(r => (r.seq === 1 || r.seq === 2) && (r?.isActive === true || r?.IsActive === true))
+
+  activeRobots.forEach(robot => {
+    const url = `/api/v1/robots/sse/${robot.seq}/down-utm`
+    const es = new EventSource(url)
+    let lastUpdate = 0
+
+    es.onmessage = (event) => {
+      try {
+        const now = Date.now()
+        if (now - lastUpdate < 300) return
+        const data = JSON.parse(event.data)
+        if (data?.position &&
+            typeof data.position.x === 'number' &&
+            typeof data.position.y === 'number' &&
+            !isNaN(data.position.x) && !isNaN(data.position.y)) {
+          robotPositions.value.set(robot.seq, { x: data.position.x, y: data.position.y })
+          map3dRef.value?.updatePosition(robot.seq, data.position.x, data.position.y)
+          lastUpdate = now
+        }
+      } catch (e) {
+        console.error(`SSE parse error (robot ${robot.seq}):`, e)
+      }
+    }
+
+    es.onerror = () => {
+      es.close()
+      robotPositions.value.delete(robot.seq)
+      map3dRef.value?.clearPosition(robot.seq)
+    }
+
+    newEventSources.set(robot.seq, es)
+  })
+
+  return newEventSources
+}
+
 // Watchers
 let eventSources = new Map()
 
-// robotsStore.robots? ??? ??SSE ?????
-// robots seq ??? ?? ?? SSE ??? (?? ?? ? ???? ??? ??)
 watch(
   () => robotsStore.robots.map(r => r.seq).join(','),
   () => {
-    eventSources.forEach(source => source.close())
+    eventSources.forEach(s => s.close())
     eventSources.clear()
     eventSources = setupSSE()
   }
 )
 
-// currentRobotSeq ???????????????????????
-watch(() => currentRobotSeq.value, () => {
-  updateChartSeries()
-})
-
-watch([() => robotPositions.value], () => {
-  if (chartRef.value && mapData.value) {
-    updateChartSeries()
-  }
-}, { deep: true })
-
-watch(selectedNodes, () => {
-  updateChartSeries()
-})
-
-// ?? ???? ??? ?? ?? ?? ??? (?? ??? ??)
 watch(() => props.robot?.seq, (newSeq, oldSeq) => {
   if (newSeq && newSeq !== oldSeq) {
     selectedNodes.value = []
-    updateChartSeries()
+    map3dRef.value?.resetNodeSelection()
   }
 })
 
-// Lifecycle hooks
+// Lifecycle
 onMounted(() => {
-  const resizeObserver = new ResizeObserver((entries) => {
-    for (const entry of entries) {
-      const { width, height } = entry.contentRect
-      imageWidth.value = width * 0.9
-      imageHeight.value = height * 0.95
-
-      if (chartRef.value) {
-        chartRef.value.resize()
-        recalcBgRect()
-      }
-    }
-  })
-
-  if (containerRef.value) {
-    resizeObserver.observe(containerRef.value)
-  }
-
   fetchMapData()
   eventSources = setupSSE()
 })
 
 onUnmounted(() => {
-  console.log('Cleaning up SSE connections...') // ?????
-  eventSources.forEach(source => {
-    source.close()
-    console.log('Closed SSE connection') // ?????
-  })
+  eventSources.forEach(s => s.close())
   eventSources.clear()
-  robotPositions.value.clear() // ??? ????????
+  robotPositions.value.clear()
 })
 
-// ???????????????
 defineExpose({
   handleNavigate,
   handlePatrol,

@@ -68,9 +68,9 @@
           <div class="grid grid-cols-3 gap-1.5 w-36 select-none">
             <div></div>
             <button
-              @mousedown="startCmd('forward')" @mouseup="stopCmd" @mouseleave="stopCmd"
-              @touchstart.prevent="startCmd('forward')" @touchend="stopCmd"
-              :class="btnClass('forward')"
+              @mousedown="startCmd('up')" @mouseup="stopCmd" @mouseleave="stopCmd"
+              @touchstart.prevent="startCmd('up')" @touchend="stopCmd"
+              :class="btnClass('up')"
             >&#8593;</button>
             <div></div>
 
@@ -80,7 +80,7 @@
               :class="btnClass('left')"
             >&#8592;</button>
             <button
-              @click="sendCmd('stop')"
+              @click="sendCmd('space')"
               class="p-3 rounded text-center font-bold text-sm bg-red-100 hover:bg-red-200 text-red-600 transition-colors"
             >{{ '\uc815\uc9c0' }}</button>
             <button
@@ -91,9 +91,9 @@
 
             <div></div>
             <button
-              @mousedown="startCmd('backward')" @mouseup="stopCmd" @mouseleave="stopCmd"
-              @touchstart.prevent="startCmd('backward')" @touchend="stopCmd"
-              :class="btnClass('backward')"
+              @mousedown="startCmd('down')" @mouseup="stopCmd" @mouseleave="stopCmd"
+              @touchstart.prevent="startCmd('down')" @touchend="stopCmd"
+              :class="btnClass('down')"
             >&#8595;</button>
             <div></div>
           </div>
@@ -158,7 +158,7 @@ onUnmounted(async () => {
   window.removeEventListener('keydown', onKeyDown)
   window.removeEventListener('keyup', onKeyUp)
   if (isManualMode.value && selectedSeq.value) {
-    await sendCmd('stop')
+    await sendCmd('space')
     await callService('waiting')
   }
 })
@@ -185,7 +185,7 @@ const enterManual = async () => {
 
 const exitManual = async () => {
   if (!selectedSeq.value) return
-  await sendCmd('stop')
+  await sendCmd('space')
   try {
     await callService('waiting')
     isManualMode.value = false
@@ -220,7 +220,7 @@ const startCmd = (dir) => {
 const stopCmd = () => {
   if (cmdInterval) { clearInterval(cmdInterval); cmdInterval = null }
   activeDir.value = null
-  sendCmd('stop')
+  sendCmd('space')
 }
 
 const btnClass = (dir) => [
@@ -232,12 +232,13 @@ const btnClass = (dir) => [
       : 'bg-gray-100 text-gray-300 cursor-not-allowed'
 ]
 
+// middle_teleop_node.cpp 기대값: UP / DOWN / LEFT / RIGHT / SPACE
 const keyMap = {
-  ArrowUp: 'forward',  w: 'forward',  W: 'forward',
-  ArrowDown: 'backward', s: 'backward', S: 'backward',
-  ArrowLeft: 'left',   a: 'left',    A: 'left',
-  ArrowRight: 'right', d: 'right',   D: 'right',
-  ' ': 'stop',
+  ArrowUp: 'up',    w: 'up',    W: 'up',
+  ArrowDown: 'down', s: 'down',  S: 'down',
+  ArrowLeft: 'left', a: 'left',  A: 'left',
+  ArrowRight: 'right', d: 'right', D: 'right',
+  ' ': 'space',
 }
 
 const pressedKeys = new Set()
@@ -248,8 +249,8 @@ const onKeyDown = (e) => {
   const dir = keyMap[e.key]
   if (!dir) return
   e.preventDefault()
-  if (dir === 'stop') {
-    sendCmd('stop')
+  if (dir === 'space') {
+    sendCmd('space')
     activeDir.value = null
     return
   }
@@ -264,11 +265,11 @@ const onKeyDown = (e) => {
 const onKeyUp = (e) => {
   pressedKeys.delete(e.key)
   const dir = keyMap[e.key]
-  if (!dir || dir === 'stop') return
+  if (!dir || dir === 'space') return
   if (activeDir.value === dir) {
     if (cmdInterval) { clearInterval(cmdInterval); cmdInterval = null }
     activeDir.value = null
-    sendCmd('stop')
+    sendCmd('space')
   }
 }
 </script>

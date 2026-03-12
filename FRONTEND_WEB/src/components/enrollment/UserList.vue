@@ -1,21 +1,20 @@
 <template>
   <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5 mb-5">
-    <!-- ?¨Ïö©?êÍ? ?ÜÏúºÎ©??±Î°ù Ïπ¥Îìú ?úÏãú -->
+    <!-- ???? ??? ?? ?? ?? -->
     <div
       v-if="users.length === 0"
       @click="openModal"
       class="flex flex-col items-center justify-center border-2 border-dashed border-blue-500 rounded-lg h-80 cursor-pointer hover:bg-blue-100"
     >
       <div class="text-5xl text-blue-500">+</div>
-      <div class="mt-3 text-lg font-semibold text-blue-500">?±Î°ù?òÍ∏∞</div>
+      <div class="mt-3 text-lg font-semibold text-blue-500">?? ????</div>
     </div>
-    <!-- ?¨Ïö©??Î™©Î°ù Ïπ¥Îìú -->
+    <!-- ??? ?? ?? -->
     <div
       v-for="user in users"
       :key="user.id"
       class="border rounded-lg shadow-sm p-4 text-center"
     >
-      <!-- ?¥Î?ÏßÄÍ∞Ä ?àÏúºÎ©?Ï≤?Î≤àÏß∏ ?¥Î?ÏßÄ??URL???úÏãú -->
       <img
         v-if="user.images && user.images.length > 0"
         :src="user.images[0].url"
@@ -26,14 +25,14 @@
         v-else
         class="w-full h-72 bg-gray-200 flex items-center justify-center text-gray-500"
       >
-        No Image
+        ??? ??
       </div>
       <div class="mt-3 text-lg font-bold">{{ user.name }}</div>
       <div class="mt-2 text-sm text-gray-700">
-        <p><strong>ÏßÅÍ∏â:</strong> {{ user.position }}</p>
+        <p><strong>??:</strong> {{ user.position }}</p>
         <p>
-          <strong>?¥Î???Î≤àÌò∏:</strong>
-          {{ user.phone ? user.phone : "No Phone" }}
+          <strong>???:</strong>
+          {{ user.phone ? user.phone : "??" }}
         </p>
       </div>
     </div>
@@ -42,7 +41,13 @@
 
 <script setup>
 defineProps({
-  users: Array,
-  openModal: Function,
+  users: {
+    type: Array,
+    default: () => [],
+  },
+  openModal: {
+    type: Function,
+    default: () => {},
+  },
 });
 </script>

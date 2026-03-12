@@ -98,8 +98,7 @@ const robots = computed(() => {
 });
 
 const isActive = (robot) =>
-  /^robot_\d+$/.test(robot.manufactureName) &&
-  (robot.isActive === true || robot.IsActive === true);
+  robot.isActive === true || robot.IsActive === true;
 
 onMounted(() => {
   const savedRobot = localStorage.getItem('selectedRobot')

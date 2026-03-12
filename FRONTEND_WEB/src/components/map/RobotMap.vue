@@ -414,7 +414,7 @@ function setupSSE() {
   const newEventSources = new Map()
   
   const activeRobots = robotsStore.robots
-    .filter(robot => (robot.seq === 1 || robot.seq === 2) && robot?.IsActive === true);
+    .filter(robot => (robot.seq === 1 || robot.seq === 2) && (robot?.isActive === true || robot?.IsActive === true));
   
   activeRobots.forEach(robot => {
     console.log(`Setting up SSE for robot ${robot.seq}`) // ?�버깅용

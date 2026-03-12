@@ -61,6 +61,11 @@ class RobotRepository:
         robot = await self.db.robots.find_one({"manufactureName": name})
         return Robot(**robot) if robot else None
 
+    async def find_robot_by_seq(self, seq: int) -> Optional[Robot]:
+        await self.initialize()
+        robot = await self.db.robots.find_one({"seq": seq, "IsDeleted": False})
+        return Robot(**robot) if robot else None
+
     async def find_robot_by_nickname(self, nickname: str) -> Optional[Robot]:
         await self.initialize()
         robot = await self.db.robots.find_one({"nickname": nickname})
@@ -243,7 +248,6 @@ class RobotRepository:
                 detail=f"로봇 상태 업데이트 실패: {str(e)}"
             )
 
-<<<<<<< HEAD
     async def update_robot_nickname(self, seq: int, new_nickname: str) -> Optional[Robot]:
         """로봇의 닉네임을 업데이트합니다."""
         await self.initialize()
@@ -284,5 +288,3 @@ class RobotRepository:
             logger.error(traceback.format_exc())
             return False
             
-=======
->>>>>>> dc86656e24a4d32ae1d229d37b8d461d9390ac23

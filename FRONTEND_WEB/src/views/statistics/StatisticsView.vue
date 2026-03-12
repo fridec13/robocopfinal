@@ -2,30 +2,30 @@
   <div class="min-h-screen flex flex-col overflow-auto">
     <div class="p-5 flex-1">
       <div class="dashboard flex gap-4 justify-center">
-        <div 
-          v-for="(metric, index) in metrics" 
+        <div
+          v-for="(metric, index) in metrics"
           :key="index"
           class="p-4 shadow-md rounded-lg bg-white relative flex flex-col items-start w-52 border-l-8"
           :class="metric.borderClass"
         >
           <p class="text-gray-700 text-sm">{{ metric.title }}</p>
-          <p class="text-2xl font-bold">{{ metric.count }}대</p>
+          <p class="text-2xl font-bold">{{ metric.count }}{{ '\ub300' }}</p>
         </div>
       </div>
 
       <!-- Filter Section -->
       <div class="filter-section my-5 flex flex-col md:flex-row gap-4 items-center">
-        <label for="robot-select" class="text-gray-700">로봇 선택:</label>
+        <label for="robot-select" class="text-gray-700">{{ '\ub85c\ubd07 \uc120\ud0dd:' }}</label>
         <select id="robot-select" v-model="selectedRobot" class="p-2 border rounded-lg">
-          <option value="all">모든 로봇</option>
+          <option value="all">{{ '\ubaa8\ub4e0 \ub85c\ubd07' }}</option>
           <option v-for="robot in robots" :key="robot.seq" :value="robot.seq">
             {{ robot.nickname }}
           </option>
         </select>
 
         <!-- Date Range Picker -->
-        <label for="date-range" class="text-gray-700">기간 설정:</label>
-        <input type="date" v-model="startDate" class="p-2 border rounded-lg" /> ~ 
+        <label for="date-range" class="text-gray-700">{{ '\uae30\uac04 \uc124\uc815:' }}</label>
+        <input type="date" v-model="startDate" class="p-2 border rounded-lg" /> ~
         <input type="date" v-model="endDate" class="p-2 border rounded-lg" />
       </div>
 
@@ -52,15 +52,14 @@ const robotsStore = useRobotsStore()
 const robots = ref([])
 const selectedRobot = ref('all')
 
-// Date range model
 const startDate = ref('')
 const endDate = ref('')
 
 const metrics = ref([
-  { title: '활동 중인 로봇', count: 0, borderClass: 'border-blue-500' },
-  { title: '충전 중인 로봇', count: 0, borderClass: 'border-green-500' },
-  { title: '고장 난 로봇', count: 0, borderClass: 'border-yellow-500' },
-  { title: '수리 중인 로봇', count: 0, borderClass: 'border-orange-500' },
+  { title: '\uac00\ub3d9 \uc911\uc778 \ub85c\ubd07', count: 0, borderClass: 'border-blue-500' },
+  { title: '\ucda9\uc804 \uc911\uc778 \ub85c\ubd07', count: 0, borderClass: 'border-green-500' },
+  { title: '\uace0\uc7a5 \ub09c \ub85c\ubd07',       count: 0, borderClass: 'border-yellow-500' },
+  { title: '\ube44\ud65c\uc131 \ub85c\ubd07',         count: 0, borderClass: 'border-orange-500' },
 ])
 
 const filteredRobots = computed(() => {
@@ -72,10 +71,26 @@ const filteredRobots = computed(() => {
 const updateMetrics = () => {
   const fr = filteredRobots.value
   metrics.value = [
-    { title: '활동 중인 로봇', count: fr.filter(r => r.isActive !== 'false').length, borderClass: 'border-blue-500' },
-    { title: '충전 중인 로봇', count: fr.filter(r => r.status === 'charging').length, borderClass: 'border-green-500' },
-    { title: '고장 난 로봇', count: fr.filter(r => r.status === 'error').length, borderClass: 'border-yellow-500' },
-    { title: '휴식 중인 로봇', count: fr.filter(r => r.isActive === 'false').length, borderClass: 'border-orange-500' },
+    {
+      title: '\uac00\ub3d9 \uc911\uc778 \ub85c\ubd07',
+      count: fr.filter(r => r.isActive === true || r.IsActive === true).length,
+      borderClass: 'border-blue-500',
+    },
+    {
+      title: '\ucda9\uc804 \uc911\uc778 \ub85c\ubd07',
+      count: fr.filter(r => r.status === 'charging').length,
+      borderClass: 'border-green-500',
+    },
+    {
+      title: '\uace0\uc7a5 \ub09c \ub85c\ubd07',
+      count: fr.filter(r => r.status === 'error').length,
+      borderClass: 'border-yellow-500',
+    },
+    {
+      title: '\ube44\ud65c\uc131 \ub85c\ubd07',
+      count: fr.filter(r => r.isActive !== true && r.IsActive !== true).length,
+      borderClass: 'border-orange-500',
+    },
   ]
 }
 

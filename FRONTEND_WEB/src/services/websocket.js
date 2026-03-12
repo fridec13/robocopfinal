@@ -13,7 +13,7 @@ class WebSocketService {
     this.pendingMessages = []
   }
 
-  // 싱글톤 인스턴스
+  // ?��????�스?�스
   static getInstance() {
     if (!this.instance) {
       this.instance = new WebSocketService()
@@ -21,7 +21,7 @@ class WebSocketService {
     return this.instance
   }
 
-  // 웹소켓 연결
+  // ?�소�??�결
   async connect(url) {
     if (this.ws) return
     
@@ -41,7 +41,7 @@ class WebSocketService {
         resolve()
       }
       this.ws.onclose = () => {
-        console.log('WebSocket 연결 끊김')
+        console.log('WebSocket ?�결 ?��?')
         this.isConnected = false
         this.handleReconnect()
       }
@@ -52,7 +52,7 @@ class WebSocketService {
   handleReconnect() {
     if (this.reconnectAttempts < this.maxReconnectAttempts) {
       this.reconnectAttempts++
-      console.log(`재연결 시도 ${this.reconnectAttempts}/${this.maxReconnectAttempts}...`)
+      console.log(`?�연�??�도 ${this.reconnectAttempts}/${this.maxReconnectAttempts}...`)
       setTimeout(() => {
         this.connect(this.ws.url)
       }, this.reconnectTimeout)
@@ -65,12 +65,12 @@ class WebSocketService {
     }
     this.subscriptions.get(topic).add(callback)
 
-    // 구독 시작 메시지 전송 (비동기로 처리)
+    // 구독 ?�작 메시지 ?�송 (비동기로 처리)
     setTimeout(() => {
       this.send('subscribe', { topic })
     }, 0)
 
-    // 구독 해제 함수 반환
+    // 구독 ?�제 ?�수 반환
     return () => {
       this.unsubscribe(topic, callback)
     }
@@ -81,7 +81,7 @@ class WebSocketService {
       this.subscriptions.get(topic).delete(callback)
       if (this.subscriptions.get(topic).size === 0) {
         this.subscriptions.delete(topic)
-        // 구독 해제 메시지 전송
+        // 구독 ?�제 메시지 ?�송
         this.send('unsubscribe', { topic })
       }
     }

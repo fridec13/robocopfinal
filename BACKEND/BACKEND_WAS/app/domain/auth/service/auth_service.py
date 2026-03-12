@@ -33,11 +33,7 @@ class AuthService:
                 raise HTTPException(status_code=400, detail="비밀번호는 필수입니다")
             
             # 비밀번호 해싱
-<<<<<<< HEAD
             user_data.hashedPassword = security_service.hash_password(user_data.password)
-=======
-            user_data.hashedPassword = self.security_service.hash_password(user_data.password)
->>>>>>> dc86656e24a4d32ae1d229d37b8d461d9390ac23
             user_data.password = None  # 평문 비밀번호 제거
             
             return await self.repository.create_user(user_data.dict(exclude_none=True))
@@ -56,11 +52,7 @@ class AuthService:
 
     async def authenticate_user(self, username: str, password: str):
         user = await self.repository.find_user_by_username(username)
-<<<<<<< HEAD
         if not user or not self.verify_password(password, user.hashedPassword):
-=======
-        if not user or not security_service.verify_password(password, user.hashedPassword):
->>>>>>> dc86656e24a4d32ae1d229d37b8d461d9390ac23
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Incorrect username or password",
@@ -80,9 +72,9 @@ class AuthService:
         refresh_token = security_service.create_refresh_token({"sub": username})
         
         return Token(
-            access_token=access_token,
-            refresh_token=refresh_token,
-            token_type="bearer"
+            accessToken=access_token,
+            refreshToken=refresh_token,
+            tokenType="bearer"
         )
 
     async def refresh_tokens(self, refresh_token: str) -> Token:
@@ -153,7 +145,6 @@ class AuthService:
             
             # MongoDB 데이터를 User 모델에 맞게 변환
             return User(
-<<<<<<< HEAD
                 id=user_data.id,  # _id 대신 id 사용
                 username=user_data.username,
                 hashedPassword=user_data.hashedPassword,
@@ -161,15 +152,6 @@ class AuthService:
                 isActive=user_data.isActive,
                 isDefaultPassword=user_data.isDefaultPassword,
                 createdAt=user_data.createdAt
-=======
-                id=str(user_data._id),  # ObjectId를 문자열로 변환
-                username=user_data.username,
-                hashed_password=user_data.hashedPassword,  # 이미 alias로 처리됨
-                role=user_data.role,
-                is_active=user_data.isActive,  # 이미 alias로 처리됨
-                is_default_password=user_data.isDefaultPassword,  # 이미 alias로 처리됨
-                created_at=user_data.createdAt  # 이미 alias로 처리됨
->>>>>>> dc86656e24a4d32ae1d229d37b8d461d9390ac23
             )
         except JWTError:
             raise HTTPException(

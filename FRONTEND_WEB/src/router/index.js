@@ -15,7 +15,7 @@ const router = createRouter({
       path: '/',
       name: 'monitoring',
       component: MonitoringView,
-      meta: { requiresAuth: true } // 로그인 필요
+      meta: { requiresAuth: true } // 로그???�요
     },
     {
       path: '/login',
@@ -27,55 +27,55 @@ const router = createRouter({
       path: '/management',
       name: 'management',
       component: ManagementView,
-      meta: { requiresAuth: true } // 로그인 필요
+      meta: { requiresAuth: true } // 로그???�요
     },
     {
       path: '/:seq',
       name: 'detail',
       component: RobotDetailView,
-      meta: { requiresAuth: true } // 로그인 필요
+      meta: { requiresAuth: true } // 로그???�요
     },
     {
       path: '/camera',
       name: 'camera',
       component: CameraView,
-      meta: { requiresAuth: true } // 로그인 필요
+      meta: { requiresAuth: true } // 로그???�요
     },
     {
       path: '/enrollment',
       name: 'enrollment',
       component: EnrollmentView,
-      meta: { requiresAuth: true } // 로그인 필요
+      meta: { requiresAuth: true } // 로그???�요
     },
     {
       path: '/control',
       name: 'control',
       component: RobotControlView,
-      meta: { requiresAuth: true } // 로그인 필요
+      meta: { requiresAuth: true } // 로그???�요
     },
     {
       path: '/statistics',
       name: 'statistics',
       component: StatisticsView,
-      meta: { requiresAuth: true } // 로그인 필요
+      meta: { requiresAuth: true } // 로그???�요
     }
   ]
 })
 
-// 네비게이션 가드 추가 (로그인 여부 확인)
+// ?�비게이??가??추�? (로그???��? ?�인)
 router.beforeEach((to, from, next) => {
-  const isAuthenticated = !!localStorage.getItem('accessToken'); // 로그인 상태 확인
+  const isAuthenticated = !!localStorage.getItem('accessToken'); // 로그???�태 ?�인
 
   if (to.meta.requiresAuth && !isAuthenticated) {
-    // 로그인 안 된 상태에서 인증이 필요한 페이지로 가려고 하면 로그인 페이지로 이동
-    alert('로그인이 필요합니다.');
+    // 로그???????�태?�서 ?�증???�요???�이지�?가?�고 ?�면 로그???�이지�??�동
+    alert('로그?�이 ?�요?�니??');
     next('/login');
   } else if (to.meta.guestOnly && isAuthenticated) {
-    // 로그인된 사용자가 로그인 페이지(`/login`)에 접근하려고 하면 차단
-    alert('이미 로그인된 상태입니다.');
+    // 로그?�된 ?�용?��? 로그???�이지(`/login`)???�근?�려�??�면 차단
+    alert('?��? 로그?�된 ?�태?�니??');
     next('/');
   } else {
-    next(); // 정상적으로 이동
+    next(); // ?�상?�으�??�동
   }
 });
 

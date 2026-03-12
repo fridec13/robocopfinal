@@ -1,5 +1,3 @@
-import socket
-import threading
 import logging
 import json
 import asyncio
@@ -79,23 +77,30 @@ async def broadcast_to_clients(message: str):
             logger.error(f"메시지 전송 중 오류 발생: {e}")
             clients.remove(client)
 
-def start_socket_server():
-    """TCP 소켓 서버를 시작합니다."""
-    server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)  # 포트 재사용 설정
-    server.bind(("0.0.0.0", 6000))  # 모든 인터페이스에서 수신
-    server.listen(5)
-    logger.info("TCP 소켓 서버가 시작되었습니다.")
-
+async def handle_async_client(reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
+    """asyncio 기반 클라이언트 처리"""
+    addr = writer.get_extra_info('peername')
+    logger.info(f"클라이언트 연결: {addr}")
     try:
         while True:
-            client_socket, addr = server.accept()
-            # 비동기적으로 클라이언트 처리
-            asyncio.run(handle_client(client_socket, addr))
-    except KeyboardInterrupt:
-        logger.info("서버가 종료됩니다.")
+            data = await reader.read(1024)
+            if not data:
+                break
+            await handle_message(data.decode('utf-8'))
+    except Exception as e:
+        logger.error(f"클라이언트 처리 중 오류: {e}")
     finally:
-        server.close()
+        logger.info(f"클라이언트 연결 종료: {addr}")
+        writer.close()
+
+async def start_socket_server():
+    """asyncio 기반 TCP 소켓 서버를 시작합니다."""
+    server = await asyncio.start_server(
+        handle_async_client, "0.0.0.0", 6000
+    )
+    logger.info("TCP 소켓 서버가 시작되었습니다.")
+    async with server:
+        await server.serve_forever()
 
 async def send_person_images(person_id: int, response_type: str, images: List[ImageInfo]):
     """특정 Person의 이미지 갱신 시 클라이언트에게 JSON 데이터를 보냅니다."""

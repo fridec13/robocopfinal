@@ -9,7 +9,7 @@ alembic==1.13.1
 # FastAPI & Web Dependencies
 uvicorn==0.27.0
 httptools>=0.5.0
-uvloop>=0.17.0
+# uvloop>=0.17.0  # Linux/Mac only, not supported on Windows
 python-dotenv==1.0.0
 pydantic==2.5.3
 pydantic-settings==2.1.0
@@ -235,7 +235,7 @@ websockets
 # xacro==2.0.8
 sqlalchemy
 
-# 테스트 의존성
+# Test Dependencies
 pytest==7.4.3
 pytest-asyncio==0.21.1
 httpx==0.25.1

@@ -5,17 +5,11 @@ from typing import List, Optional, Union, Set, Dict, Callable
 from ..repository.robot_repository import RobotRepository
 from ..models.robot_models import (
     Robot, Position, BatteryStatus, RobotStatus, RobotImage,
-<<<<<<< HEAD
     StatusResponse, LogResponse, Motion
-=======
-    StatusResponse, LogResponse, ROS2RobotStatus
->>>>>>> dc86656e24a4d32ae1d229d37b8d461d9390ac23
 )
 from ....common.config.manager import get_settings
 import aiohttp
 import os
-<<<<<<< HEAD
-import roslibpy
 import json
 import logging
 from redis import Redis
@@ -28,11 +22,6 @@ import time
 
 settings = get_settings()
 logger = logging.getLogger(__name__)
-=======
-from .ros2_robot_service import ROS2RobotClient
-
-settings = get_settings()
->>>>>>> dc86656e24a4d32ae1d229d37b8d461d9390ac23
 
 class RobotService:
     _instances: Dict[int, "RobotService"] = {}
@@ -48,7 +37,6 @@ class RobotService:
     """로봇 관련 비즈니스 로직과 프론트엔드 통신을 담당하는 서비스"""
     def __init__(self):
         self.repository = RobotRepository()
-<<<<<<< HEAD
         self.ros_bridge = RosBridgeConnection()  # 싱글톤 인스턴스 사용
         self.media_server_url = settings.storage.MEDIA_SERVER_URL
         self.upload_api_url = settings.storage.UPLOAD_API_URL
@@ -138,12 +126,6 @@ class RobotService:
             pass
         
     # === 기존 REST API 관련 메서드들 ===
-=======
-        self.ros2_client = ROS2RobotClient()
-        self.media_server_url = settings.storage.MEDIA_SERVER_URL
-        self.upload_api_url = settings.storage.UPLOAD_API_URL
-
->>>>>>> dc86656e24a4d32ae1d229d37b8d461d9390ac23
     async def create_robot(self, nickname: str, ip_address: str, image: Optional[UploadFile] = None) -> Robot:
         try:
             # IP 주소 형식 검증
@@ -166,13 +148,8 @@ class RobotService:
             seq = await self.repository.get_next_robot_id()
             
             # 제조사 지정 이름 생성
-<<<<<<< HEAD
             manufacturer_name = f"robot_{seq:02d}"
             sensor_name = f"sensor_{seq:02d}"
-=======
-            manufacturer_name = f"ROBOT_{seq:03d}"
-
->>>>>>> dc86656e24a4d32ae1d229d37b8d461d9390ac23
             # 이미지 처리
             robot_image = None
             if image:
@@ -206,10 +183,7 @@ class RobotService:
                 seq=seq,
                 manufactureName=manufacturer_name,
                 nickname=nickname,
-<<<<<<< HEAD
                 sensorName=sensor_name,
-=======
->>>>>>> dc86656e24a4d32ae1d229d37b8d461d9390ac23
                 ipAddress=ip_address,
                 status=RobotStatus.WAITING,
                 position=Position(),
@@ -348,31 +322,27 @@ class RobotService:
 
     async def start_ros2_client(self):
         """ROS2 클라이언트를 시작합니다."""
-<<<<<<< HEAD
-        # 연결 상태 확인
-        if not self.ros_bridge.client or not self.ros_bridge.client.is_connected:
+        if not self.ros_bridge.is_connected:
             logger.info("ROS Bridge 연결이 필요합니다.")
-            await self.ros_bridge._connect()
-        
-        # 토픽 설정
+            await self.ros_bridge.connect()
+
         topics = {
             "/robot_1/utm_pose": "geometry_msgs/PoseStamped",
             "/robot_1/status": "robot_custom_interfaces/msg/Status",
         }
-        
-        # 토픽 구독
+
         for topic_name, msg_type in topics.items():
             if topic_name not in self.topics:
                 try:
-                    topic = roslibpy.Topic(self.ros_bridge.client, topic_name, msg_type)
-                    
-                    def callback(message):
-                        processed_message = self.process_message_by_topic(topic_name, message)
-                        if processed_message:
-                            asyncio.create_task(self.broadcast_to_frontend(processed_message))
-                    
-                    topic.subscribe(callback)
-                    self.topics[topic_name] = topic
+                    def make_callback(t_name):
+                        def callback(message):
+                            processed_message = self.process_message_by_topic(t_name, message)
+                            if processed_message:
+                                asyncio.create_task(self.broadcast_to_frontend(processed_message))
+                        return callback
+
+                    await self.ros_bridge.subscribe(topic_name, msg_type, make_callback(topic_name))
+                    self.topics[topic_name] = topic_name
                     logger.info(f"토픽 구독 성공: {topic_name}")
                 except Exception as e:
                     logger.error(f"토픽 구독 실패 {topic_name}: {str(e)}")
@@ -723,11 +693,10 @@ class RobotService:
             return
     
         try:
-            if not self.ros_bridge.client or not self.ros_bridge.client.is_connected:
-                self.ros_bridge.ensure_connected()
-            topic = roslibpy.Topic(self.ros_bridge.client, topic_name, msg_type, throttle_rate=1000)  # 1000ms = 1Hz
-            topic.subscribe(self._on_down_utm_message)
-            self.topics[topic_name] = topic
+            if not self.ros_bridge.is_connected:
+                await self.ros_bridge.connect()
+            await self.ros_bridge.subscribe(topic_name, msg_type, self._on_down_utm_message)
+            self.topics[topic_name] = topic_name
         except Exception as e:
             raise
 
@@ -763,11 +732,10 @@ class RobotService:
             return
         
         try:
-            if not self.ros_bridge.client or not self.ros_bridge.client.is_connected:
-                self.ros_bridge.ensure_connected()
-            topic = roslibpy.Topic(self.ros_bridge.client, topic_name, msg_type, throttle_rate=1000)  # 1000ms = 1Hz
-            topic.subscribe(self._on_alert_message)
-            self.topics[topic_name] = topic
+            if not self.ros_bridge.is_connected:
+                await self.ros_bridge.connect()
+            await self.ros_bridge.subscribe(topic_name, msg_type, self._on_alert_message)
+            self.topics[topic_name] = topic_name
         except Exception as e:
             raise
 
@@ -833,62 +801,3 @@ class RobotService:
             logger.error(f"로봇 서비스 정리 중 에러 발생: {str(e)}")
             raise
 
-=======
-        # 모든 활성 로봇에 대한 토픽 구독
-        robots = await self.get_all_robots()
-        for robot in robots:
-            if not robot.IsDeleted:
-                await self.ros2_client.subscribe_to_robot(
-                    robot.seq, 
-                    self._handle_robot_status
-                )
-        
-        # 클라이언트 시작
-        await self.ros2_client.start_listening()
-
-    async def _handle_robot_status(self, message: dict):
-        """로봇 상태 메시지를 처리합니다."""
-        try:
-            # ROS2 메시지를 모델로 변환
-            ros2_status = ROS2RobotStatus(
-                robot_id=message.get("robot_id"),
-                status=message.get("status"),
-                battery_level=message.get("battery_level"),
-                battery_charging=message.get("battery_charging"),
-                position_x=message.get("position_x"),
-                position_y=message.get("position_y"),
-                position_z=message.get("position_z"),
-                orientation=message.get("orientation"),
-                cpu_temp=message.get("cpu_temp"),
-                error_code=message.get("error_code"),
-                error_message=message.get("error_message"),
-                timestamp=datetime.now()
-            )
-
-            # 로봇 상태 업데이트
-            update_data = {
-                "status": ros2_status.status,
-                "position": Position(
-                    x=ros2_status.position_x,
-                    y=ros2_status.position_y,
-                    z=ros2_status.position_z,
-                    orientation=ros2_status.orientation
-                ),
-                "battery": BatteryStatus(
-                    level=ros2_status.battery_level,
-                    isCharging=ros2_status.battery_charging
-                ),
-                "cpuTemp": ros2_status.cpu_temp,
-                "lastActive": ros2_status.timestamp
-            }
-
-            # DB 업데이트
-            robot_id = int(ros2_status.robot_id.split('_')[1])  # robot_1 -> 1
-            await self.repository.update_robot_status(robot_id, update_data)
-
-            # WebSocket 클라이언트들에게 브로드캐스트
-            # (이 부분은 WebSocket 구현 후 추가)
-
-        except Exception as e:
-            print(f"로봇 상태 처리 중 오류 발생: {str(e)}")
->>>>>>> dc86656e24a4d32ae1d229d37b8d461d9390ac23

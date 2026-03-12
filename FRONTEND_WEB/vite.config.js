@@ -16,7 +16,7 @@ export default defineConfig({
     open: '/login',
     proxy: {
       '/api': {
-        target: 'https://robocopbackendssafy.duckdns.org',
+        target: 'http://localhost:8080',
         changeOrigin: true,
         secure: false,
         headers: {

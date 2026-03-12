@@ -1,10 +1,17 @@
-from fastapi import APIRouter, WebSocket, HTTPException
+from fastapi import APIRouter, WebSocket, HTTPException, Request
+from fastapi.responses import StreamingResponse
 from ..service.lidar_service import LidarService
 from ..models.lidar_models import LidarConfig, LidarStatus
 from ....common.models.responses import BaseResponse
 from ....common.config.manager import get_settings
+from ....domain.ros_publisher.service.ros_bridge_connection import RosBridgeConnection
 import asyncio
+import json
+import math
+import time
 import logging
+import base64
+import struct
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -21,6 +28,121 @@ DEFAULT_LIDAR_CONFIG = LidarConfig(
     update_interval=0.1,
     max_points=4500
 )
+
+MAX_POINTS = 3000  # 프레임당 최대 포인트 수 (성능)
+
+@router.get("/sse/{seq}")
+async def lidar_scan_sse(seq: int, request: Request):
+    """PointCloud2 토픽을 SSE로 스트리밍 (seq=1→ssafy, seq=2→samsung)"""
+    ns = "samsung" if seq == 2 else "ssafy"
+    topic = f"/{ns}/velodyne_points"
+    topic_type = "sensor_msgs/PointCloud2"
+
+    queue: asyncio.Queue = asyncio.Queue(maxsize=2)
+    _debug_logged = [False]
+
+    def on_pointcloud(message: dict):
+        try:
+            raw_data = message.get("data")
+            if not raw_data:
+                return
+
+            # rosbridge는 uint8[] 를 base64 문자열로 전송
+            if isinstance(raw_data, str):
+                data_bytes = base64.b64decode(raw_data)
+            else:
+                data_bytes = bytes(raw_data)
+
+            point_step = int(message.get("point_step") or 32)
+            width  = int(message.get("width")  or 0)
+            height = int(message.get("height") or 1)
+            n_points = width * height
+
+            if n_points == 0 or len(data_bytes) < n_points * point_step:
+                return
+
+            # 필드 오프셋 파악 (fields 배열에서 name→offset 매핑)
+            fields = {f["name"]: int(f["offset"]) for f in message.get("fields", [])}
+            x_off = fields.get("x", 0)
+            y_off = fields.get("y", 4)
+            z_off = fields.get("z", 8)
+            i_off = fields.get("intensity", 16)
+
+            if not _debug_logged[0]:
+                logger.info(
+                    f"[lidar] first PC2: topic={topic}, n_points={n_points}, "
+                    f"point_step={point_step}, fields={list(fields.keys())}"
+                )
+                _debug_logged[0] = True
+
+            positions = []
+            intensities = []
+            step = max(1, n_points // MAX_POINTS)  # 다운샘플링
+
+            for i in range(0, n_points, step):
+                off = i * point_step
+                try:
+                    x = struct.unpack_from('<f', data_bytes, off + x_off)[0]
+                    y = struct.unpack_from('<f', data_bytes, off + y_off)[0]
+                    z = struct.unpack_from('<f', data_bytes, off + z_off)[0]
+                except struct.error:
+                    continue
+                if math.isnan(x) or math.isnan(y) or math.isnan(z):
+                    continue
+                if math.isinf(x) or math.isinf(y) or math.isinf(z):
+                    continue
+                # ROS 좌표계 → Three.js z-up 맵뷰 변환
+                # ROS: x=전방, y=좌, z=상
+                # Three.js 카메라가 -y 방향에서 바라보므로:
+                #   three_x = -ros_y  (ROS 좌 → Three.js 오른쪽)
+                #   three_y =  ros_x  (ROS 전방 → Three.js y = 화면 위쪽)
+                #   three_z =  ros_z  (높이는 그대로)
+                positions.extend([-y, x, z])
+                try:
+                    intensity = struct.unpack_from('<f', data_bytes, off + i_off)[0]
+                    intensities.append(float(intensity) if not math.isnan(intensity) else 1.0)
+                except (struct.error, ValueError):
+                    intensities.append(1.0)
+
+            try:
+                queue.put_nowait({"positions": positions, "intensities": intensities})
+            except asyncio.QueueFull:
+                try:
+                    queue.get_nowait()
+                    queue.put_nowait({"positions": positions, "intensities": intensities})
+                except Exception:
+                    pass
+        except Exception as e:
+            logger.warning(f"[lidar] PC2 parse error (seq={seq}): {e}")
+
+    bridge = RosBridgeConnection(port=10000)
+    client_id = f"lidar_sse_{seq}_{id(queue)}"
+    bridge.register_client(client_id)
+    await bridge.subscribe(topic, topic_type, on_pointcloud)
+    logger.info(f"[lidar] SSE started: seq={seq}, topic={topic}")
+
+    async def event_generator():
+        try:
+            while True:
+                if await request.is_disconnected():
+                    break
+                try:
+                    pcd = await asyncio.wait_for(queue.get(), timeout=2.0)
+                    payload = json.dumps({"pcd": pcd, "timestamp": time.time()})
+                    yield f"data: {payload}\n\n"
+                except asyncio.TimeoutError:
+                    yield ": keepalive\n\n"
+        finally:
+            await bridge.unsubscribe(topic, on_pointcloud)
+            bridge.unregister_client(client_id)
+            logger.info(f"[lidar] SSE ended: seq={seq}, topic={topic}")
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
+
 
 @router.websocket("/ws")
 async def lidar_websocket(websocket: WebSocket):

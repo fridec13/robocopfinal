@@ -4,10 +4,10 @@
       <div class="flex justify-between items-center mb-4">
         <h3 class="text-lg font-semibold">로봇 설정</h3>
       </div>
-      <label class="block text-sm font-medium text-gray-700">로봇명:</label>
-      <input 
-        v-model="robot.nickname" 
-        placeholder="로봇명을 설정하세요" 
+      <label class="block text-sm font-medium text-gray-700">로봇명</label>
+      <input
+        v-model="nickname"
+        placeholder="로봇명을 설정하세요"
         class="w-full mt-2 p-2 border border-gray-300 rounded-md focus:ring focus:ring-blue-300 focus:outline-none"
       />
       <div class="flex justify-end gap-3 mt-4">
@@ -29,11 +29,8 @@ const props = defineProps({
 const emit = defineEmits(['save', 'close']);
 const nickname = ref(props.robot?.nickname || '');
 
-// props.robot이 변경될 때 nickname 값을 업데이트
 watch(() => props.robot, (newVal) => {
-  if (newVal) {
-    nickname.value = newVal.nickname || '';
-  }
+  if (newVal) nickname.value = newVal.nickname || '';
 }, { deep: true });
 
 const saveNickname = () => {

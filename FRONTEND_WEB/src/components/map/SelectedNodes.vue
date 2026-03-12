@@ -5,7 +5,7 @@
   >
     <div class="flex justify-between items-center mb-3">
       <h4 class="text-sm font-semibold text-gray-800">
-        선택된 노드 ({{ selectedNodes.length }})
+        ?�택???�드 ({{ selectedNodes.length }})
       </h4>
       <div class="h-5 w-5 bg-blue-500 rounded-full flex items-center justify-center text-white text-xs">
         {{ selectedNodes.length }}

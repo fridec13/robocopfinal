@@ -1,115 +1,124 @@
 <template>
-  <div class="robot-detail max-w-xl mx-auto p-5 overflow-y-auto max-h-[80vh]">
-    <div class="robot-header flex items-center gap-3">
-      <h1 v-if="robot" class="text-xl font-bold">
-        {{ robot.nickname || robot.manufactureName }} 
-        <span class="text-sm" :class="robot.isActive ? 'text-green-500' : 'text-red-500'">
-          ({{ robot.isActive ? '활성화' : '비활성화' }})
-        </span>
-      </h1>
-      <button @click="openNicknameModal(robot)" class="text-gray-700 text-lg hover:text-gray-900">
-        <i class="fas fa-cog"></i>
-      </button>
+  <div class="h-full overflow-y-auto bg-gray-100 p-5">
+    <div v-if="robot" class="space-y-4">
+      <div class="border-b pb-2 mb-4 flex items-center justify-between">
+        <h1 class="text-2xl font-bold text-gray-800">
+          {{ robot.nickname || robot.manufactureName }}
+          <span class="text-sm" :class="robot.isActive ? 'text-green-500' : 'text-red-500'">
+            ({{ robot.isActive ? '활성화' : '비활성화' }})
+          </span>
+        </h1>
+        <button
+          @click="showNicknameModal = true"
+          class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 text-sm"
+        >
+          닉네임 설정
+        </button>
+      </div>
+
+      <RobotInfo :robot="robot" />
+
+      <!-- 경로 제어 -->
+      <div class="bg-white rounded-lg shadow-md p-5">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="text-lg font-semibold">경로 제어</h3>
+          <div class="flex gap-2 flex-wrap justify-end">
+            <button
+              @click="handleNavigate"
+              :disabled="selectedNodes.length !== 1"
+              class="px-3 py-1.5 text-sm rounded font-medium transition"
+              :class="selectedNodes.length === 1
+                ? 'bg-blue-500 text-white hover:bg-blue-600'
+                : 'bg-gray-200 text-gray-400 cursor-not-allowed'"
+            >이동 (노드 1개)</button>
+            <button
+              @click="handlePatrol"
+              :disabled="selectedNodes.length < 2"
+              class="px-3 py-1.5 text-sm rounded font-medium transition"
+              :class="selectedNodes.length >= 2
+                ? 'bg-green-500 text-white hover:bg-green-600'
+                : 'bg-gray-200 text-gray-400 cursor-not-allowed'"
+            >순찰 (노드 2개+)</button>
+            <button
+              @click="handleHoming"
+              class="px-3 py-1.5 text-sm bg-yellow-500 text-white rounded hover:bg-yellow-600 font-medium"
+            >복귀</button>
+            <button
+              @click="handleTempStop"
+              class="px-3 py-1.5 text-sm bg-orange-500 text-white rounded hover:bg-orange-600 font-medium"
+            >일시정지</button>
+            <button
+              @click="handleResume"
+              class="px-3 py-1.5 text-sm bg-gray-500 text-white rounded hover:bg-gray-600 font-medium"
+            >재개</button>
+          </div>
+        </div>
+        <p class="text-xs text-gray-400 mb-3">맵의 노드를 클릭해 목적지를 선택하세요. 이동=1개, 순찰=2개 이상</p>
+        <RobotMap
+          ref="robotMapRef"
+          :robot="robot"
+          :showSelectedNodes="true"
+          :isMonitoringMode="false"
+          :showNodes="true"
+          @selectedNodesChange="onSelectedNodesChange"
+        />
+      </div>
+    </div>
+    <div v-else class="flex justify-center items-center h-64">
+      <p class="text-gray-500">로봇 정보를 불러오는 중...</p>
     </div>
 
-    <!-- RobotInfo 컴포넌트 사용 -->
-    <RobotInfo v-if="robot" :robot="robot" />
-
-    <button class="mt-5 w-full py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-700" @click="goBack">
-      뒤로 가기
-    </button>
-
-    <!-- RobotNickname 모달 컴포넌트 -->
-    <RobotNickname 
-      v-if="showNicknameModal" 
-      :show="showNicknameModal" 
-      :robot="selectedRobotForNickname" 
-      @close="closeNicknameModal" 
-      @save="setRobotNickname" />
+    <RobotNickname
+      v-if="showNicknameModal"
+      :robot="robot"
+      @close="showNicknameModal = false"
+    />
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
+import { ref, computed, watch } from 'vue';
+import { useRoute } from 'vue-router';
 import { useRobotsStore } from '@/stores/robots';
-import RobotNickname from '@/components/detail/RobotNickname.vue';
+import { useRobotCommandsStore } from '@/stores/robotCommands';
 import RobotInfo from '@/components/detail/RobotInfo.vue';
-import axios from 'axios'
+import RobotNickname from '@/components/detail/RobotNickname.vue';
+import RobotMap from '@/components/map/RobotMap.vue';
 
 const route = useRoute();
-const router = useRouter();
 const robotsStore = useRobotsStore();
-const seq = route.params.seq;
+const robotCommandsStore = useRobotCommandsStore();
 
-// 닉네임 관련
-const showNicknameModal = ref(false);
-const selectedRobotForNickname = ref(null);
-const openNicknameModal = (robot) => {
-  selectedRobotForNickname.value = { seq: robot.seq, nickname: robot.nickname || '' };
-  showNicknameModal.value = true;
-};
-
-const closeNicknameModal = () => {
-  showNicknameModal.value = false;
-};
-
-const setRobotNickname = async (seq, nickname) => {
-  try {
-    // 백엔드 API 호출 (PUT 요청)
-    await axios.patch(`https://robocopbackendssafy.duckdns.org/api/v1/robots/${seq}/nickname`, 
-      nickname, // 객체가 아니라 단순 문자열 전달
-      {
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      }
-    );
-
-    // 성공적으로 업데이트하면 로컬 데이터도 반영
-    const robotIndex = robotsStore.robots.findIndex(r => r.seq === seq);
-    if (robotIndex !== -1) {
-      robotsStore.robots[robotIndex].nickname = nickname;
-    }
-
-    // 로컬 스토리지에도 저장 (선택한 로봇이 있을 경우)
-    if (robotsStore.selectedRobot === seq) {
-      localStorage.setItem(`robot_nickname_${seq}`, nickname);
-    }
-
-    // 최신 로봇 데이터 다시 불러오기
-    await robotsStore.loadRobots();
-
-    // 모달 닫기
-    showNicknameModal.value = false;
-  } catch (error) {
-    console.error('로봇 닉네임 업데이트 실패:', error);
-    alert('로봇 닉네임을 업데이트하는 중 오류가 발생했습니다.');
-  }
-};
-
-const goBack = () => {
-  router.push('/');
-};
-
-const robot = computed(() => {
-  // seq로 먼저 검색
-  const robotBySeq = robotsStore.robots.find(r => r.seq == seq);
-  if (robotBySeq) return robotBySeq;
-  
-  // seq로 찾지 못한 경우 manufactureName으로 검색
-  const robotByName = robotsStore.robots.find(r => r.manufactureName === seq);
-  return robotByName || null;
+// URL /:seq 우선, 없으면 스토어 selectedRobot 사용
+const robotSeq = computed(() => {
+  const seqFromRoute = route.params.seq ? parseInt(route.params.seq, 10) : null;
+  return seqFromRoute || robotsStore.selectedRobot || null;
 });
 
-onMounted(() => {
-  robotsStore.loadRobots()
-})
-
-// watch 수정 - 로봇이 없을 때만 다시 로드
-watch(() => robotsStore.robots, () => {
-  if (!robot.value) {
-    robotsStore.loadRobots()
+// 라우트로 접근 시 스토어 selectedRobot도 동기화
+watch(robotSeq, (seq) => {
+  if (seq && robotsStore.selectedRobot !== seq) {
+    robotsStore.selectedRobot = seq;
   }
-}, { deep: true })
+}, { immediate: true });
+
+const robot = computed(() => {
+  const seq = robotSeq.value;
+  if (!seq) return null;
+  return robotsStore.robots.find(r => r.seq === seq) || null;
+});
+
+const showNicknameModal = ref(false);
+const robotMapRef = ref(null);
+const selectedNodes = ref([]);
+
+const onSelectedNodesChange = (nodes) => {
+  selectedNodes.value = nodes;
+};
+
+const handleNavigate = () => robotMapRef.value?.handleNavigate();
+const handlePatrol   = () => robotMapRef.value?.handlePatrol();
+const handleHoming   = () => robotCommandsStore.homingCommand(robotSeq.value);
+const handleTempStop = () => robotCommandsStore.tempStopCommand(robotSeq.value);
+const handleResume   = () => robotCommandsStore.resumeCommand(robotSeq.value);
 </script>

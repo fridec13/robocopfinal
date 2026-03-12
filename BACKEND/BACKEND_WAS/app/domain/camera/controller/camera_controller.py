@@ -1,27 +1,17 @@
-from fastapi import APIRouter, WebSocket, HTTPException
+from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
-from ....common.models.responses import BaseResponse
-<<<<<<< HEAD
-from ...robot.service.robot_service import RobotService  # robot 도메인에서 가져오기
-=======
-from ..service.camera_service import camera_service  # 싱글톤 인스턴스 import
->>>>>>> dc86656e24a4d32ae1d229d37b8d461d9390ac23
 import logging
-import roslibpy
 from ..service.camera_service import CameraService
-import time
-import asyncio
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
-<<<<<<< HEAD
 # ROS 토픽 정보 상수 정의
 CAMERA_TOPICS = [
     {
-        "name_pattern": "/ssafy/tb3_{direction}_camera/image_raw/compressed",
-        "type": "sensor_msgs/CompressedImage",
-        "description": "로봇 카메라 압축 이미지 스트림"
+        "name_pattern": "/ssafy/tb3_{direction}_camera/image_raw",
+        "type": "sensor_msgs/Image",
+        "description": "로봇 카메라 raw 이미지 스트림"
     }
 ]
 
@@ -78,41 +68,17 @@ async def front_video_feed(seq: int):
                 is_isaac=True
             )
         else:
-            robot_service = RobotService()
-            robot = await robot_service.get_robot(identifier=seq)
-            if not robot:
-                raise HTTPException(status_code=404, detail="로봇을 찾을 수 없습니다")
-            
-            sensor_name = robot.sensorName if robot.sensorName else "ssafy"  # 기본값으로 ssafy 사용
-            
             topic_pattern = CAMERA_TOPICS[0]["name_pattern"]
-            topic_name = str
-            if seq == 1:
-                topic_name = topic_pattern.format(direction="front").replace("ssafy", "ssafy")
-            if seq == 2:
-                topic_name = topic_pattern.format(direction="front").replace("ssafy", "samsung")
+            robot_ns = "samsung" if seq == 2 else "ssafy"
+            topic_name = topic_pattern.format(direction="front").replace("ssafy", robot_ns)
             topic_type = CAMERA_TOPICS[0]["type"]
-            
+
             logger.info(f"일반 로봇 전면 카메라 토픽 설정: {topic_name}, {topic_type}")
-            await camera_service.set_front_topic(
-                topic_name,
-                topic_type,
-                is_isaac=False
-            )
-        
-        timeout = 3
-        start_time = time.time()
-        while time.time() - start_time < timeout:
-            if camera_service.front_frame is not None:
-                return StreamingResponse(
-                    camera_service.get_front_frame(),
-                    media_type="multipart/x-mixed-replace; boundary=frame"
-                )
-            await asyncio.sleep(0.1)
-            
-        raise HTTPException(
-            status_code=503, 
-            detail="카메라 스트림을 받을 수 없습니다. 카메라가 연결되어 있는지 확인하세요."
+            await camera_service.set_front_topic(topic_name, topic_type, is_isaac=False)
+
+        return StreamingResponse(
+            camera_service.stream_front(),
+            media_type="multipart/x-mixed-replace; boundary=frame"
         )
         
         
@@ -146,41 +112,17 @@ async def rear_video_feed(seq: int):
                 is_isaac=True
             )
         else:
-            robot_service = RobotService()
-            robot = await robot_service.get_robot(identifier=seq)
-            if not robot:
-                raise HTTPException(status_code=404, detail="로봇을 찾을 수 없습니다")
-            
-            sensor_name = robot.sensorName if robot.sensorName else "ssafy"  # 기본값으로 ssafy 사용
-            
             topic_pattern = CAMERA_TOPICS[0]["name_pattern"]
-            topic_name = str
-            if seq == 1:
-                topic_name = topic_pattern.format(direction="rear").replace("ssafy", "ssafy")
-            if seq == 2:
-                topic_name = topic_pattern.format(direction="rear").replace("ssafy", "samsung")
+            robot_ns = "samsung" if seq == 2 else "ssafy"
+            topic_name = topic_pattern.format(direction="rear").replace("ssafy", robot_ns)
             topic_type = CAMERA_TOPICS[0]["type"]
-            
+
             logger.info(f"일반 로봇 후면 카메라 토픽 설정: {topic_name}, {topic_type}")
-            await camera_service.set_rear_topic(
-                topic_name,
-                topic_type,
-                is_isaac=False
-            )
-            
-        timeout = 3  # 3초 타임아웃
-        start_time = time.time()
-        while time.time() - start_time < timeout:
-            if camera_service.front_frame is not None:
-                return StreamingResponse(
-                    camera_service.get_rear_frame(),
-                    media_type="multipart/x-mixed-replace; boundary=frame"
-                )
-            await asyncio.sleep(0.1)
-            
-        raise HTTPException(
-            status_code=503, 
-            detail="카메라 스트림을 받을 수 없습니다. 카메라가 연결되어 있는지 확인하세요."
+            await camera_service.set_rear_topic(topic_name, topic_type, is_isaac=False)
+
+        return StreamingResponse(
+            camera_service.stream_rear(),
+            media_type="multipart/x-mixed-replace; boundary=frame"
         )
             
     except Exception as e:
@@ -188,16 +130,6 @@ async def rear_video_feed(seq: int):
         logger.error(f"Request seq: {seq}")
         raise HTTPException(status_code=500, detail=str(e))
 
-=======
-@router.get("/video_feed")
-async def video_feed():
-    """카메라 영상 스트리밍 엔드포인트"""
-    return StreamingResponse(
-        camera_service.get_frame(),
-        media_type="multipart/x-mixed-replace; boundary=frame"
-    )
-
->>>>>>> dc86656e24a4d32ae1d229d37b8d461d9390ac23
 # @router.websocket("/ws")
 # async def websocket_endpoint(websocket: WebSocket):
 #     """WebSocket 연결을 처리하는 엔드포인트"""
@@ -212,8 +144,4 @@ async def video_feed():
 #         try:
 #             await websocket.close()
 #         except:
-<<<<<<< HEAD
 #             pass
-=======
-#             pass
->>>>>>> dc86656e24a4d32ae1d229d37b8d461d9390ac23

@@ -14,37 +14,37 @@ export const useRobotsStore = defineStore('robots', () => {
     ipAddress: '',
   })
   const savedRobot = localStorage.getItem('selectedRobot')
-  const selectedRobot = ref(savedRobot ? parseInt(savedRobot, 10) : 0)  // localStorage에서 가져온 문자열을 parseInt로 변환
+  const selectedRobot = ref(savedRobot ? parseInt(savedRobot, 10) : 0)  // localStorage?�서 가?�온 문자?�을 parseInt�?변??
   let pollingInterval = null
   const POLLING_INTERVAL = 500
- // localStorage와 연동되는 사이드바 상태
+ // localStorage?� ?�동?�는 ?�이?�바 ?�태
   const storedLeftState = localStorage.getItem("left-sidebar-collapsed");
   const leftSidebarCollapsed = ref(storedLeftState === "true");
-  // App.vue의 토글 함수와 연동
+  // App.vue???��? ?�수?� ?�동
   const updateSidebarStates = (left) => {
     leftSidebarCollapsed.value = left;
   };
 
-  // 로봇 리스트 불러오기
+  // 로봇 리스??불러?�기
   const loadRobots = async () => {
     try {
-      const res = await axios.get('https://robocopbackendssafy.duckdns.org/api/v1/robots/')
+      const res = await axios.get('/api/v1/robots/')
       if (res.data?.data && Array.isArray(res.data.data)) {
         robots.value = res.data.data.map(mapRobotData)
       } else {
-        console.error('예상치 못한 데이터 구조:', res.data)
+        console.error('?�상�?못한 ?�이??구조:', res.data)
         robots.value = []
       }
     } catch (err) {
-      console.error('로봇 데이터 로드 에러:', err)
+      console.error('로봇 ?�이??로드 ?�러:', err)
       robots.value = []
     }
   }
 
-  // 웹소켓 데이터와 DB 데이터 병합
+  // ?�소�??�이?��? DB ?�이??병합
   const displayRobots = computed(() => robots.value)
 
-  // API 폴링 관련
+  // API ?�링 관??
   const startPolling = () => {
     if (pollingInterval) {
       stopPolling()
@@ -54,14 +54,14 @@ export const useRobotsStore = defineStore('robots', () => {
 
     pollingInterval = setInterval(async () => {
       try {
-        const res = await axios.get('https://robocopbackendssafy.duckdns.org/api/v1/robots/')
+        const res = await axios.get('/api/v1/robots/')
         if (res.data?.data && Array.isArray(res.data.data)) {
           robots.value = res.data.data.map(mapRobotData)
         } else {
-          console.error('예상치 못한 데이터 구조:', res.data)
+          console.error('?�상�?못한 ?�이??구조:', res.data)
         }
       } catch (error) {
-        console.error('폴링 에러:', error)
+        console.error('?�링 ?�러:', error)
       }
     }, POLLING_INTERVAL)
   }
@@ -73,13 +73,13 @@ export const useRobotsStore = defineStore('robots', () => {
     }
   }  
 
-    // 공통 매핑 함수 추가
+    // 공통 매핑 ?�수 추�?
     const mapRobotData = (robot) => ({
       seq: robot.seq,
       manufactureName: robot.manufactureName,
       nickname: robot.nickname || '',
       sensorName: robot.sensorName || '',
-      ipAddress: robot.ipAddress || '알 수 없음',
+      ipAddress: robot.ipAddress || '?????�음',
       networkStatus: robot.networkStatus || 'disconnected',
       status: robot.status || 'waiting',
       networkHealth: robot.networkHealth || 100,
@@ -94,14 +94,14 @@ export const useRobotsStore = defineStore('robots', () => {
       cpuTemp: robot.cpuTemp || 0,
       waypoints: robot.waypoints || [],
       startAt: robot.startAt || new Date().toISOString(),
-      IsActive: robot.IsActive || false,
+      isActive: robot.IsActive ?? true,
       isDeleted: robot.IsDeleted || false,
       lastActive: robot.lastActive || new Date().toISOString(),
       createdAt: robot.createdAt || new Date().toISOString(),
       updatedAt: robot.updatedAt || new Date().toISOString()
     })
 
-  // 로봇 닉네임 설정
+  // 로봇 ?�네???�정
   const openNicknameModal = (robot) => {
     selectedRobotForNickname.value = robot
     showNicknameModal.value = true
@@ -112,7 +112,7 @@ export const useRobotsStore = defineStore('robots', () => {
     selectedRobotForNickname.value = null
   }
 
-  // 로봇 선택 처리 → 로컬 스토리지 저장
+  // 로봇 ?�택 처리 ??로컬 ?�토리�? ?�??
   const handleRobotSelection = () => {
     if (selectedRobot.value !== 0) {
       localStorage.setItem('selectedRobot', String(selectedRobot.value))
@@ -126,7 +126,7 @@ export const useRobotsStore = defineStore('robots', () => {
     formData.append('nickname', newRobot.value.nickname)
     formData.append('ipAddress', newRobot.value.ipAddress)
 
-    axios.post('https://robocopbackendssafy.duckdns.org/api/v1/robots/', formData, {
+    axios.post('/api/v1/robots/', formData, {
       headers: { 'Content-Type': 'multipart/form-data' }
     })
       .then((response) => {
@@ -144,39 +144,39 @@ export const useRobotsStore = defineStore('robots', () => {
           networkHealth: registeredRobot.networkHealth || 100,
           position: registeredRobot.position
             ? `x: ${registeredRobot.position.x}, y: ${registeredRobot.position.y}`
-            : '알 수 없음',
-          orientation: registeredRobot.position?.orientation || '알 수 없음',
+            : '?????�음',
+          orientation: registeredRobot.position?.orientation || '?????�음',
           motion: registeredRobot.motion 
           ? `kph: ${registeredRobot.motion.kph}, mps: ${registeredRobot.motion.mps}`
-          : '알 수 없음',
+          : '?????�음',
           cpuTemp: registeredRobot.cpuTemp || 0.0,
           waypoints : registeredRobot.waypoints || [],
           imageUrl: registeredRobot.image?.url || '',
-          startAt: registeredRobot.startAt || '알 수 없음',
-          lastActive: registeredRobot.lastActive || '알 수 없음',
+          startAt: registeredRobot.startAt || '?????�음',
+          lastActive: registeredRobot.lastActive || '?????�음',
           isActive: registeredRobot.IsActive || false
         })
 
         closeModal()
-        alert('로봇 등록 성공')
+        alert('로봇 ?�록 ?�공')
       })
       .catch((err) => {
-        console.error('로봇 등록 실패:', err)
-        alert('로봇 등록에 실패했습니다.')
+        console.error('로봇 ?�록 ?�패:', err)
+        alert('로봇 ?�록???�패?�습?�다.')
       })
   }
 
-  // 로봇 관리 모달 열기/닫기
+  // 로봇 관�?모달 ?�기/?�기
   const openRobotManagementModal = () => { showRobotManagementModal.value = true }
   const closeRobotManagementModal = () => { showRobotManagementModal.value = false }
 
-  // 로봇 등록 모달 열기 (로봇 관리 모달을 닫고 열기)
+  // 로봇 ?�록 모달 ?�기 (로봇 관�?모달???�고 ?�기)
   const openAddRobotModal = () => {
     showRobotManagementModal.value = false
     showModal.value = true
   }
 
-  // 로봇 등록 모달 닫기
+  // 로봇 ?�록 모달 ?�기
   const closeModal = () => {
     showModal.value = false
     newRobot.value = {
@@ -210,7 +210,7 @@ const updateRobotStatus = (seq, statusData) => {
     showModal,
     showRobotManagementModal,
     newRobot,
-    // 숫자로 관리되는 selectedRobot
+    // ?�자�?관리되??selectedRobot
     selectedRobot,
     showNicknameModal,
     selectedRobotForNickname,

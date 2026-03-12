@@ -24,9 +24,9 @@ class CameraService:
 
     def __init__(self):
         self.seq: Optional[int] = None
-        self.fps: int = 10
-        self.jpeg_quality: int = 75
-        self.frame_size: tuple = (640, 480)
+        self.fps: int = 5
+        self.jpeg_quality: int = 70
+        self.frame_size: tuple = (480, 360)
 
         self.ros_bridge: Optional[RosBridgeConnection] = None
         self.isaac_bridge: Optional[RosBridgeConnection] = None
@@ -35,8 +35,18 @@ class CameraService:
         self._front_queue: asyncio.Queue = asyncio.Queue(maxsize=2)
         self._rear_queue: asyncio.Queue = asyncio.Queue(maxsize=2)
 
+        # topic 메타 (set_front/rear_topic 에서 저장, 실제 구독은 stream 시작 시)
         self._front_topic_name: Optional[str] = None
+        self._front_topic_type: Optional[str] = None
+        self._front_is_isaac: bool = False
+        self._front_subscribed: bool = False
+        self._front_consumers: int = 0
+
         self._rear_topic_name: Optional[str] = None
+        self._rear_topic_type: Optional[str] = None
+        self._rear_is_isaac: bool = False
+        self._rear_subscribed: bool = False
+        self._rear_consumers: int = 0
 
     async def initialize(self, seq: int) -> None:
         try:
@@ -60,10 +70,14 @@ class CameraService:
 
     async def cleanup(self) -> None:
         try:
-            if self._front_topic_name and self.ros_bridge:
-                await self.ros_bridge.unsubscribe(self._front_topic_name, self._on_front_image)
-            if self._rear_topic_name and self.ros_bridge:
-                await self.ros_bridge.unsubscribe(self._rear_topic_name, self._on_rear_image)
+            if self._front_subscribed and self._front_topic_name and self.ros_bridge:
+                bridge = self._get_bridge(self._front_is_isaac)
+                await bridge.unsubscribe(self._front_topic_name, self._on_front_image)
+                self._front_subscribed = False
+            if self._rear_subscribed and self._rear_topic_name and self.ros_bridge:
+                bridge = self._get_bridge(self._rear_is_isaac)
+                await bridge.unsubscribe(self._rear_topic_name, self._on_rear_image)
+                self._rear_subscribed = False
 
             if self.ros_bridge:
                 self.ros_bridge.unregister_client(self.client_id)
@@ -84,7 +98,6 @@ class CameraService:
 
     def _decode_image(self, message: dict) -> Optional[np.ndarray]:
         try:
-            # CompressedImage uses 'format', raw Image uses 'encoding'
             encoding = message.get('encoding', '') or message.get('format', '')
             raw_data = message.get('data', '')
 
@@ -92,7 +105,6 @@ class CameraService:
                 logger.warning(f"[camera] empty data field, keys={list(message.keys())}")
                 return None
 
-            # rosbridge sends uint8[] as either base64 string or list of ints
             if isinstance(raw_data, list):
                 image_bytes = bytes(raw_data)
             else:
@@ -105,7 +117,7 @@ class CameraService:
                 or 'jpeg' in encoding.lower()
                 or 'jpg' in encoding.lower()
                 or 'png' in encoding.lower()
-                or encoding == ''  # CompressedImage with unknown format → try imdecode
+                or encoding == ''
             )
 
             if is_compressed:
@@ -133,7 +145,7 @@ class CameraService:
             return None
 
     def _on_front_image(self, message: dict) -> None:
-        logger.info(f"[camera seq={self.seq}] front msg received, keys={list(message.keys())}")
+        logger.debug(f"[camera seq={self.seq}] front msg received, keys={list(message.keys())}")
         frame = self._decode_image(message)
         if frame is not None:
             try:
@@ -148,7 +160,7 @@ class CameraService:
             logger.warning(f"[camera seq={self.seq}] front decode returned None")
 
     def _on_rear_image(self, message: dict) -> None:
-        logger.info(f"[camera seq={self.seq}] rear msg received, keys={list(message.keys())}")
+        logger.debug(f"[camera seq={self.seq}] rear msg received, keys={list(message.keys())}")
         frame = self._decode_image(message)
         if frame is not None:
             try:
@@ -163,59 +175,104 @@ class CameraService:
             logger.warning(f"[camera seq={self.seq}] rear decode returned None")
 
     async def set_front_topic(self, topic_name: str, topic_type: str, is_isaac: bool = False) -> None:
-        bridge = self._get_bridge(is_isaac)
-        if self._front_topic_name and self._front_topic_name != topic_name:
+        """토픽 정보만 저장 – 실제 구독은 stream_front() 첫 소비자 진입 시 수행"""
+        if self._front_subscribed and self._front_topic_name != topic_name:
+            bridge = self._get_bridge(self._front_is_isaac)
             await bridge.unsubscribe(self._front_topic_name, self._on_front_image)
+            self._front_subscribed = False
         self._front_topic_name = topic_name
-        await bridge.subscribe(topic_name, topic_type, self._on_front_image)
+        self._front_topic_type = topic_type
+        self._front_is_isaac = is_isaac
 
     async def set_rear_topic(self, topic_name: str, topic_type: str, is_isaac: bool = False) -> None:
-        bridge = self._get_bridge(is_isaac)
-        if self._rear_topic_name and self._rear_topic_name != topic_name:
+        """토픽 정보만 저장 – 실제 구독은 stream_rear() 첫 소비자 진입 시 수행"""
+        if self._rear_subscribed and self._rear_topic_name != topic_name:
+            bridge = self._get_bridge(self._rear_is_isaac)
             await bridge.unsubscribe(self._rear_topic_name, self._on_rear_image)
+            self._rear_subscribed = False
         self._rear_topic_name = topic_name
-        await bridge.subscribe(topic_name, topic_type, self._on_rear_image)
+        self._rear_topic_type = topic_type
+        self._rear_is_isaac = is_isaac
 
     async def stream_front(self):
-        """Async generator for MJPEG front camera stream."""
+        """MJPEG 전면 카메라 스트림 (소비자 수 기반 구독/해제)"""
+        # 첫 소비자 진입 시 구독
+        if not self._front_subscribed and self._front_topic_name:
+            bridge = self._get_bridge(self._front_is_isaac)
+            await bridge.subscribe(self._front_topic_name, self._front_topic_type, self._on_front_image)
+            self._front_subscribed = True
+            logger.info(f"[camera seq={self.seq}] front subscribed: {self._front_topic_name}")
+
+        self._front_consumers += 1
+        logger.info(f"[camera seq={self.seq}] front consumer connected (total={self._front_consumers})")
+
         interval = 1.0 / self.fps
         encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), self.jpeg_quality]
-        while True:
-            try:
-                frame = await asyncio.wait_for(self._front_queue.get(), timeout=interval * 3)
-                _, buffer = cv2.imencode('.jpg', frame, encode_param)
-                yield (b'--frame\r\nContent-Type: image/jpeg\r\n\r\n' + buffer.tobytes() + b'\r\n')
-                await asyncio.sleep(interval)
-            except asyncio.TimeoutError:
-                await asyncio.sleep(interval)
-            except Exception as e:
-                logger.error(f"Front stream error: {e}")
-                await asyncio.sleep(0.5)
+        try:
+            while True:
+                try:
+                    frame = await asyncio.wait_for(self._front_queue.get(), timeout=interval * 3)
+                    _, buffer = cv2.imencode('.jpg', frame, encode_param)
+                    yield (b'--frame\r\nContent-Type: image/jpeg\r\n\r\n' + buffer.tobytes() + b'\r\n')
+                    await asyncio.sleep(interval)
+                except asyncio.TimeoutError:
+                    await asyncio.sleep(interval)
+                except Exception as e:
+                    logger.error(f"Front stream error: {e}")
+                    await asyncio.sleep(0.5)
+        finally:
+            self._front_consumers = max(0, self._front_consumers - 1)
+            logger.info(f"[camera seq={self.seq}] front consumer disconnected (remaining={self._front_consumers})")
+            if self._front_consumers == 0 and self._front_subscribed and self._front_topic_name:
+                try:
+                    bridge = self._get_bridge(self._front_is_isaac)
+                    await bridge.unsubscribe(self._front_topic_name, self._on_front_image)
+                    self._front_subscribed = False
+                    logger.info(f"[camera seq={self.seq}] front unsubscribed: {self._front_topic_name}")
+                except Exception as e:
+                    logger.error(f"[camera seq={self.seq}] front unsubscribe error: {e}")
 
     async def stream_rear(self):
-        """Async generator for MJPEG rear camera stream."""
+        """MJPEG 후면 카메라 스트림 (소비자 수 기반 구독/해제)"""
+        if not self._rear_subscribed and self._rear_topic_name:
+            bridge = self._get_bridge(self._rear_is_isaac)
+            await bridge.subscribe(self._rear_topic_name, self._rear_topic_type, self._on_rear_image)
+            self._rear_subscribed = True
+            logger.info(f"[camera seq={self.seq}] rear subscribed: {self._rear_topic_name}")
+
+        self._rear_consumers += 1
+        logger.info(f"[camera seq={self.seq}] rear consumer connected (total={self._rear_consumers})")
+
         interval = 1.0 / self.fps
         encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), self.jpeg_quality]
-        while True:
-            try:
-                frame = await asyncio.wait_for(self._rear_queue.get(), timeout=interval * 3)
-                _, buffer = cv2.imencode('.jpg', frame, encode_param)
-                yield (b'--frame\r\nContent-Type: image/jpeg\r\n\r\n' + buffer.tobytes() + b'\r\n')
-                await asyncio.sleep(interval)
-            except asyncio.TimeoutError:
-                await asyncio.sleep(interval)
-            except Exception as e:
-                logger.error(f"Rear stream error: {e}")
-                await asyncio.sleep(0.5)
+        try:
+            while True:
+                try:
+                    frame = await asyncio.wait_for(self._rear_queue.get(), timeout=interval * 3)
+                    _, buffer = cv2.imencode('.jpg', frame, encode_param)
+                    yield (b'--frame\r\nContent-Type: image/jpeg\r\n\r\n' + buffer.tobytes() + b'\r\n')
+                    await asyncio.sleep(interval)
+                except asyncio.TimeoutError:
+                    await asyncio.sleep(interval)
+                except Exception as e:
+                    logger.error(f"Rear stream error: {e}")
+                    await asyncio.sleep(0.5)
+        finally:
+            self._rear_consumers = max(0, self._rear_consumers - 1)
+            logger.info(f"[camera seq={self.seq}] rear consumer disconnected (remaining={self._rear_consumers})")
+            if self._rear_consumers == 0 and self._rear_subscribed and self._rear_topic_name:
+                try:
+                    bridge = self._get_bridge(self._rear_is_isaac)
+                    await bridge.unsubscribe(self._rear_topic_name, self._on_rear_image)
+                    self._rear_subscribed = False
+                    logger.info(f"[camera seq={self.seq}] rear unsubscribed: {self._rear_topic_name}")
+                except Exception as e:
+                    logger.error(f"[camera seq={self.seq}] rear unsubscribe error: {e}")
 
-    # Backwards-compatible sync generator aliases (used by older controller code)
     def get_front_frame(self):
-        """Legacy sync wrapper - use stream_front() for new code."""
-        loop = asyncio.get_event_loop()
         return self.stream_front()
 
     def get_rear_frame(self):
-        """Legacy sync wrapper - use stream_rear() for new code."""
         return self.stream_rear()
 
     async def __aenter__(self):

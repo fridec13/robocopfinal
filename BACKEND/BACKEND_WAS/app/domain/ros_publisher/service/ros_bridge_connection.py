@@ -53,6 +53,7 @@ class RosBridgeConnection:
                 self.url,
                 ping_interval=20,
                 ping_timeout=10,
+                max_size=10 * 1024 * 1024,  # 10 MB (raw 이미지 대응)
             )
             self._connected = True
             self._receive_task = asyncio.create_task(self._receive_loop())

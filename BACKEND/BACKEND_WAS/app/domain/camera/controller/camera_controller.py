@@ -9,9 +9,9 @@ router = APIRouter()
 # ROS 토픽 정보 상수 정의
 CAMERA_TOPICS = [
     {
-        "name_pattern": "/ssafy/tb3_{direction}_camera/image_raw/compressed",
-        "type": "sensor_msgs/CompressedImage",
-        "description": "로봇 카메라 압축 이미지 스트림"
+        "name_pattern": "/ssafy/tb3_{direction}_camera/image_raw",
+        "type": "sensor_msgs/Image",
+        "description": "로봇 카메라 raw 이미지 스트림"
     }
 ]
 

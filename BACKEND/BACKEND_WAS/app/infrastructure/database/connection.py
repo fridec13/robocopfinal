@@ -57,15 +57,17 @@ class DatabaseConnection:
                 else:
                     raise e
             
-            # 로봇 컬렉션 인덱스
+            # 로봇 컬렉션 인덱스 (sparse=True: null 값은 unique 체크 제외)
             try:
-                await db.robots.create_index("robotId", unique=True)
-                await db.robots.create_index("name", unique=True)
+                await db.robots.create_index("robotId", unique=True, sparse=True)
             except Exception as e:
-                if 'already exists' in str(e) or 'IndexKeySpecsConflict' in str(e):
-                    print("Robot 인덱스가 이미 존재합니다.")
-                else:
-                    raise e
+                if 'already exists' not in str(e) and 'IndexKeySpecsConflict' not in str(e):
+                    print(f"robotId 인덱스 생성 실패 (무시): {e}")
+            try:
+                await db.robots.create_index("name", unique=True, sparse=True)
+            except Exception as e:
+                if 'already exists' not in str(e) and 'IndexKeySpecsConflict' not in str(e):
+                    print(f"name 인덱스 생성 실패 (무시): {e}")
             
             # 비디오 세션 컬렉션 인덱스
             try:

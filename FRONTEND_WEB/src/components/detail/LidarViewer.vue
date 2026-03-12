@@ -43,9 +43,9 @@ const initThree = () => {
     0.01,
     200
   );
-  // 2D LaserScan은 x-y 평면 → 위(+z)에서 내려다보기
-  camera.position.set(0, 0, 12);
-  camera.up.set(0, 1, 0);
+  // 3D Velodyne: 비스듬히 내려다보는 시점
+  camera.position.set(0, -10, 8);
+  camera.up.set(0, 0, 1);
   camera.lookAt(0, 0, 0);
 
   renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -75,7 +75,7 @@ const initThree = () => {
   // 초기 포인트클라우드
   const geometry = new THREE.BufferGeometry();
   const material = new THREE.PointsMaterial({
-    size: 0.06,
+    size: 0.05,
     vertexColors: true,
     sizeAttenuation: true,
   });
@@ -93,15 +93,13 @@ const updatePointCloud = (pcdData) => {
   const numPoints = positions.length / 3;
   const colors = new Float32Array(numPoints * 3);
 
-  // 거리에 따라 파랑(가까움) → 초록 → 노랑(멀리)
+  // z 높이 기반 색상: 낮음=파랑, 중간=초록, 높음=빨강
   for (let i = 0; i < numPoints; i++) {
-    const x = positions[i * 3];
-    const y = positions[i * 3 + 1];
-    const dist = Math.sqrt(x * x + y * y);
-    const t = Math.min(dist / 8.0, 1.0); // 0~8m 기준 정규화
-    colors[i * 3]     = t;           // R
-    colors[i * 3 + 1] = 1.0 - t * 0.5; // G
-    colors[i * 3 + 2] = 1.0 - t;    // B
+    const z = positions[i * 3 + 2];
+    const t = Math.min(Math.max((z + 0.5) / 2.0, 0.0), 1.0); // -0.5~1.5m 범위 정규화
+    colors[i * 3]     = t;               // R (높을수록)
+    colors[i * 3 + 1] = 1.0 - Math.abs(t - 0.5) * 2; // G (중간에 최대)
+    colors[i * 3 + 2] = 1.0 - t;        // B (낮을수록)
   }
 
   pointCloud.geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));

@@ -10,6 +10,8 @@ import json
 import math
 import time
 import logging
+import base64
+import struct
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -27,67 +29,90 @@ DEFAULT_LIDAR_CONFIG = LidarConfig(
     max_points=4500
 )
 
+MAX_POINTS = 3000  # 프레임당 최대 포인트 수 (성능)
+
 @router.get("/sse/{seq}")
 async def lidar_scan_sse(seq: int, request: Request):
-    """LaserScan 토픽을 SSE로 스트리밍 (seq=1→ssafy, seq=2→samsung)"""
+    """PointCloud2 토픽을 SSE로 스트리밍 (seq=1→ssafy, seq=2→samsung)"""
     ns = "samsung" if seq == 2 else "ssafy"
-    topic = f"/{ns}/scan"
-    topic_type = "sensor_msgs/LaserScan"
+    topic = f"/{ns}/velodyne_points"
+    topic_type = "sensor_msgs/PointCloud2"
 
     queue: asyncio.Queue = asyncio.Queue(maxsize=2)
-
     _debug_logged = [False]
 
-    def on_scan(message: dict):
+    def on_pointcloud(message: dict):
         try:
+            raw_data = message.get("data")
+            if not raw_data:
+                return
+
+            # rosbridge는 uint8[] 를 base64 문자열로 전송
+            if isinstance(raw_data, str):
+                data_bytes = base64.b64decode(raw_data)
+            else:
+                data_bytes = bytes(raw_data)
+
+            point_step = int(message.get("point_step") or 32)
+            width  = int(message.get("width")  or 0)
+            height = int(message.get("height") or 1)
+            n_points = width * height
+
+            if n_points == 0 or len(data_bytes) < n_points * point_step:
+                return
+
+            # 필드 오프셋 파악 (fields 배열에서 name→offset 매핑)
+            fields = {f["name"]: int(f["offset"]) for f in message.get("fields", [])}
+            x_off = fields.get("x", 0)
+            y_off = fields.get("y", 4)
+            z_off = fields.get("z", 8)
+            i_off = fields.get("intensity", 16)
+
             if not _debug_logged[0]:
-                sample_ranges = message.get("ranges", [])[:5]
-                logger.info(f"[lidar] first scan msg keys={list(message.keys())}, angle_min={message.get('angle_min')}, angle_increment={message.get('angle_increment')}, ranges[:5]={sample_ranges}")
+                logger.info(
+                    f"[lidar] first PC2: topic={topic}, n_points={n_points}, "
+                    f"point_step={point_step}, fields={list(fields.keys())}"
+                )
                 _debug_logged[0] = True
-            ranges = message.get("ranges") or []
-            angle_min = float(message.get("angle_min") or 0.0)
-            angle_increment = float(message.get("angle_increment") or 0.0)
-            range_min = float(message.get("range_min") or 0.1)
-            range_max = float(message.get("range_max") or 10.0)
-            intensities = message.get("intensities", [])
 
             positions = []
-            out_intensities = []
+            intensities = []
+            step = max(1, n_points // MAX_POINTS)  # 다운샘플링
 
-            for i, r in enumerate(ranges):
-                if r is None:
-                    continue
+            for i in range(0, n_points, step):
+                off = i * point_step
                 try:
-                    r = float(r)
-                except (TypeError, ValueError):
+                    x = struct.unpack_from('<f', data_bytes, off + x_off)[0]
+                    y = struct.unpack_from('<f', data_bytes, off + y_off)[0]
+                    z = struct.unpack_from('<f', data_bytes, off + z_off)[0]
+                except struct.error:
                     continue
-                if math.isnan(r) or math.isinf(r):
+                if math.isnan(x) or math.isnan(y) or math.isnan(z):
                     continue
-                if r < range_min or r > range_max:
+                if math.isinf(x) or math.isinf(y) or math.isinf(z):
                     continue
-                angle = angle_min + i * angle_increment
-                positions.extend([
-                    r * math.cos(angle),   # x
-                    r * math.sin(angle),   # y
-                    0.0                    # z (2D scan)
-                ])
-                out_intensities.append(float(intensities[i]) if i < len(intensities) else 1.0)
+                positions.extend([x, y, z])
+                try:
+                    intensity = struct.unpack_from('<f', data_bytes, off + i_off)[0]
+                    intensities.append(float(intensity) if not math.isnan(intensity) else 1.0)
+                except (struct.error, ValueError):
+                    intensities.append(1.0)
 
             try:
-                queue.put_nowait({"positions": positions, "intensities": out_intensities})
+                queue.put_nowait({"positions": positions, "intensities": intensities})
             except asyncio.QueueFull:
                 try:
                     queue.get_nowait()
-                    queue.put_nowait({"positions": positions, "intensities": out_intensities})
+                    queue.put_nowait({"positions": positions, "intensities": intensities})
                 except Exception:
                     pass
         except Exception as e:
-            logger.warning(f"[lidar] scan parse error (seq={seq}): {e}")
+            logger.warning(f"[lidar] PC2 parse error (seq={seq}): {e}")
 
     bridge = RosBridgeConnection(port=10000)
     client_id = f"lidar_sse_{seq}_{id(queue)}"
     bridge.register_client(client_id)
-    await bridge.subscribe(topic, topic_type, on_scan)
+    await bridge.subscribe(topic, topic_type, on_pointcloud)
     logger.info(f"[lidar] SSE started: seq={seq}, topic={topic}")
 
     async def event_generator():
@@ -102,7 +127,7 @@ async def lidar_scan_sse(seq: int, request: Request):
                 except asyncio.TimeoutError:
                     yield ": keepalive\n\n"
         finally:
-            await bridge.unsubscribe(topic, on_scan)
+            await bridge.unsubscribe(topic, on_pointcloud)
             bridge.unregister_client(client_id)
             logger.info(f"[lidar] SSE ended: seq={seq}, topic={topic}")
 

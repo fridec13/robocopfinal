@@ -37,6 +37,10 @@ import RobotInfo from '@/components/detail/RobotInfo.vue';
 import RobotNickname from '@/components/detail/RobotNickname.vue';
 
 const robotsStore = useRobotsStore();
-const robot = computed(() => robotsStore.selectedRobot);
+const robot = computed(() => {
+  const seq = robotsStore.selectedRobot;
+  if (!seq) return null;
+  return robotsStore.robots.find(r => r.seq === seq) || null;
+});
 const showNicknameModal = ref(false);
 </script>

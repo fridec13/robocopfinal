@@ -85,10 +85,16 @@
           class="px-2 py-1 text-xs bg-green-700 hover:bg-green-600 text-white rounded">
           노드만 복사
         </button>
+        <button @click="saveToServer" :disabled="saving || nodes.length === 0"
+          class="w-full mt-1 py-1.5 text-xs font-bold rounded transition-colors"
+          :class="saving ? 'bg-gray-600 text-gray-400 cursor-not-allowed' : 'bg-purple-600 hover:bg-purple-500 text-white'">
+          {{ saving ? '저장 중...' : '🚀 서버에 저장' }}
+        </button>
       </div>
 
-      <!-- 복사 완료 메시지 -->
-      <div v-if="copyMsg" class="mx-3 mt-2 px-2 py-1 bg-green-800 text-green-300 text-xs rounded text-center">
+      <!-- 메시지 -->
+      <div v-if="copyMsg" class="mx-3 mt-2 px-2 py-1 text-xs rounded text-center"
+        :class="copyMsg.startsWith('✅') ? 'bg-purple-900 text-purple-300' : copyMsg.startsWith('❌') ? 'bg-red-900 text-red-300' : 'bg-green-800 text-green-300'">
         {{ copyMsg }}
       </div>
 
@@ -134,6 +140,7 @@ const loading = ref(true)
 const nodes = ref([])        // [[utmX, utmY], ...] — 최종 노드 목록
 const hoverUTM = ref(null)
 const copyMsg = ref('')
+const saving = ref(false)
 const interpMode = ref(false)
 const interpDist = ref(1.0)  // 보간 간격 (미터)
 
@@ -460,6 +467,30 @@ const copyNodeList = async () => {
 const showCopyMsg = (msg) => {
   copyMsg.value = msg
   setTimeout(() => { copyMsg.value = '' }, 2000)
+}
+
+const saveToServer = async () => {
+  if (nodes.value.length === 0) return
+  saving.value = true
+  try {
+    const body = buildJSON()
+    const token = localStorage.getItem('token')
+    const res = await fetch('/api/map', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {})
+      },
+      body: JSON.stringify(body)
+    })
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    const result = await res.json()
+    showCopyMsg(`✅ 서버 저장 완료 — 노드 ${result.nodes}개, 링크 ${result.links}개`)
+  } catch (e) {
+    showCopyMsg(`❌ 저장 실패: ${e.message}`)
+  } finally {
+    saving.value = false
+  }
 }
 
 const jsonPreview = computed(() => {

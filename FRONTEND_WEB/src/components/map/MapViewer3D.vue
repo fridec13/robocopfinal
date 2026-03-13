@@ -62,6 +62,8 @@ const props = defineProps({
   isMonitoringMode: { type: Boolean, default: false },
   mapNodes: { type: Array, default: () => [] },
   mapLinks: { type: Array, default: () => [] },
+  // 선택된 로봇 seq: 해당 로봇 위치로 카메라 follow-cam
+  followSeq: { type: Number, default: null },
 })
 const emit = defineEmits(['nodeClick'])
 
@@ -99,6 +101,10 @@ const loading = ref(true)
 const robotPositions = ref({})  // { seq: { x, y } } in UTM
 const debugMode = ref(false)
 const debugCursor = ref({ visible: false, x: 0, z: 0, utmX: 0, utmY: 0 })
+
+// props 없을 때 내부적으로 fetch한 맵 데이터
+const internalNodes = ref([])
+const internalLinks = ref([])
 
 // ── Three.js 내부 객체 ─────────────────────────────────────────────────────
 let scene, camera, renderer, controls, animFrame
@@ -174,6 +180,22 @@ function initScene() {
   function animate() {
     animFrame = requestAnimationFrame(animate)
     controls.update()
+
+    // follow-cam: followSeq 로봇 위치로 카메라 타깃을 부드럽게 이동
+    if (props.followSeq !== null) {
+      const pos = robotPositions.value[props.followSeq]
+      if (pos && pos.x !== 0 && pos.y !== 0) {
+        const sc = utmToScene(pos.x, pos.y)
+        const LERP = 0.05
+        const dx = sc.x - controls.target.x
+        const dz = sc.z - controls.target.z
+        controls.target.x += dx * LERP
+        controls.target.z += dz * LERP
+        camera.position.x += dx * LERP
+        camera.position.z += dz * LERP
+      }
+    }
+
     renderer.render(scene, camera)
   }
   animate()
@@ -262,11 +284,15 @@ function renderMapData() {
   nodeMeshes = []
   linkLines = []
 
-  if (!props.mapNodes.length) return
+  // props 우선, 없으면 내부 fetch 데이터 사용
+  const activeNodes = props.mapNodes.length ? props.mapNodes : internalNodes.value
+  const activeLinks = props.mapLinks.length ? props.mapLinks : internalLinks.value
+
+  if (!activeNodes.length) return
 
   // 노드 구체
   const nodeGeo = new THREE.SphereGeometry(0.25, 8, 8)
-  props.mapNodes.forEach(node => {
+  activeNodes.forEach(node => {
     const sc = utmToScene(node.id[0], node.id[1])
     const isSelected = selectedNodeSeqs.has(`${node.id[0]},${node.id[1]}`)
     const mat = new THREE.MeshLambertMaterial({
@@ -282,7 +308,7 @@ function renderMapData() {
 
   // 링크 선
   const lineMat = new THREE.LineBasicMaterial({ color: 0x4488ff, transparent: true, opacity: 0.7 })
-  props.mapLinks.forEach(link => {
+  activeLinks.forEach(link => {
     const a = utmToScene(link.source[0], link.source[1])
     const b = utmToScene(link.target[0], link.target[1])
     const geo = new THREE.BufferGeometry().setFromPoints([
@@ -421,12 +447,43 @@ defineExpose({ updatePosition, clearPosition, resetNodeSelection })
 // ── Watch ──────────────────────────────────────────────────────────────────
 watch(() => [props.mapNodes, props.mapLinks], renderMapData, { deep: true })
 
+// store의 displayRobots를 watch해 로봇 마커 자동 반영
+watch(
+  () => robotsStore.displayRobots,
+  (robots) => {
+    robots.forEach(robot => {
+      const p = robot.position
+      if (!p || (p.x === 0 && p.y === 0)) return
+      if (isNaN(p.x) || isNaN(p.y)) return
+      robotPositions.value = {
+        ...robotPositions.value,
+        [robot.seq]: { x: p.x, y: p.y },
+      }
+    })
+    updateRobotMarkers()
+  },
+  { deep: true }
+)
+
 // ── Lifecycle ──────────────────────────────────────────────────────────────
-onMounted(() => {
+onMounted(async () => {
   initScene()
   containerRef.value.addEventListener('mousedown', onClick)
   _resizeObs = new ResizeObserver(onResize)
   _resizeObs.observe(containerRef.value)
+
+  // props로 맵 데이터가 없으면 API에서 직접 fetch
+  if (!props.mapNodes.length) {
+    try {
+      const res = await fetch('/api/map')
+      const data = await res.json()
+      internalNodes.value = data.nodes || []
+      internalLinks.value = data.links || []
+      renderMapData()
+    } catch (e) {
+      console.warn('MapViewer3D: 맵 데이터 fetch 실패', e)
+    }
+  }
 })
 
 onUnmounted(() => {

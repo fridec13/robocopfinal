@@ -91,7 +91,7 @@
             <span class="text-xs text-gray-300 font-medium">글로벌 패스 맵</span>
           </div>
           <div class="flex-1 min-h-0">
-            <MapViewer3D class="w-full h-full" />
+            <MapViewer3D :followSeq="selectedSeq" class="w-full h-full" />
           </div>
         </div>
       </div>
@@ -118,8 +118,10 @@
               :class="btnClass('left')"
             >&#8592;</button>
             <button
-              @click="sendCmd('space')"
-              class="p-3 rounded text-center font-bold text-sm bg-red-100 hover:bg-red-200 text-red-600 transition-colors"
+              @click="isManualMode && sendCmd('space')"
+              :disabled="!isManualMode"
+              class="p-3 rounded text-center font-bold text-sm transition-colors"
+              :class="isManualMode ? 'bg-red-100 hover:bg-red-200 text-red-600 cursor-pointer' : 'bg-gray-100 text-gray-300 cursor-not-allowed'"
             >{{ '\uc815\uc9c0' }}</button>
             <button
               @mousedown="startCmd('right')" @mouseup="stopCmd" @mouseleave="stopCmd"

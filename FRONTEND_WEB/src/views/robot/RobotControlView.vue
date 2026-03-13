@@ -83,6 +83,19 @@
 
       </div>
 
+      <!-- 중앙 — 글로벌 패스 맵 -->
+      <div class="w-72 flex-shrink-0 flex flex-col gap-3 min-h-0">
+        <div class="flex-1 min-h-0 bg-gray-900 rounded-lg overflow-hidden flex flex-col">
+          <div class="px-3 py-1.5 bg-gray-800 flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
+            <span class="text-xs text-gray-300 font-medium">글로벌 패스 맵</span>
+          </div>
+          <div class="flex-1 min-h-0">
+            <MapViewer3D class="w-full h-full" />
+          </div>
+        </div>
+      </div>
+
       <!-- 우측 — 조작패드 -->
       <div class="w-56 flex-shrink-0 flex flex-col gap-3">
 
@@ -160,6 +173,7 @@ import axios from 'axios'
 import { useRobotsStore } from '@/stores/robots'
 import Cctv from '@/components/camera/Cctv.vue'
 import LidarViewer from '@/components/detail/LidarViewer.vue'
+import MapViewer3D from '@/components/map/MapViewer3D.vue'
 
 const robotsStore = useRobotsStore()
 

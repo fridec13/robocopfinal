@@ -99,6 +99,7 @@ const navLinks = [
   { path: '/', name: '현황' },
   { path: '/camera', name: 'CCTV' },
   { path: '/control', name: '제어' },
+  { path: '/mapmaker', name: '맵 메이커' },
   { path: '/management', name: '관리' }
 ];
 

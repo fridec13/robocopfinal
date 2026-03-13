@@ -7,6 +7,7 @@ import EnrollmentView from '@/views/enrollment/EnrollmentView.vue'
 import RobotControlView from '@/views/robot/RobotControlView.vue'
 import StatisticsView from '@/views/statistics/StatisticsView.vue'
 import ManagementView from '@/views/management/ManagementView.vue'
+import MapMakerView from '@/views/MapMakerView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -57,6 +58,12 @@ const router = createRouter({
       path: '/statistics',
       name: 'statistics',
       component: StatisticsView,
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/mapmaker',
+      name: 'mapmaker',
+      component: MapMakerView,
       meta: { requiresAuth: true }
     }
   ]

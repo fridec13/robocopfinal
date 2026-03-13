@@ -123,8 +123,8 @@ function initScene() {
 
   // 씬
   scene = new THREE.Scene()
-  scene.background = new THREE.Color(0x1a1a2e)
-  scene.fog = new THREE.FogExp2(0x1a1a2e, 0.015)
+  scene.background = new THREE.Color(0x2c3e50)
+  scene.fog = new THREE.FogExp2(0x2c3e50, 0.010)
 
   // 카메라 (기울어진 조감도)
   camera = new THREE.PerspectiveCamera(50, W / H, 0.1, 1000)
@@ -141,12 +141,20 @@ function initScene() {
   controls.maxDistance = 120
 
   // 조명
-  const ambient = new THREE.AmbientLight(0xffffff, 0.6)
-  scene.add(ambient)
-  const dirLight = new THREE.DirectionalLight(0xffffff, 0.8)
-  dirLight.position.set(20, 40, 20)
-  dirLight.castShadow = true
-  scene.add(dirLight)
+  scene.add(new THREE.AmbientLight(0xffffff, 1.8))
+
+  const dirTop = new THREE.DirectionalLight(0xffffff, 2.0)
+  dirTop.position.set(0, 80, 0)
+  dirTop.castShadow = true
+  scene.add(dirTop)
+
+  const dirFront = new THREE.DirectionalLight(0xcce8ff, 1.0)
+  dirFront.position.set(30, 40, 30)
+  scene.add(dirFront)
+
+  const dirBack = new THREE.DirectionalLight(0xffd0aa, 0.6)
+  dirBack.position.set(-30, 30, -30)
+  scene.add(dirBack)
 
   // 좌표축 헬퍼 (X=빨강, Y=초록, Z=파랑), 길이 15m
   scene.add(new THREE.AxesHelper(15))
@@ -179,7 +187,7 @@ function loadMap() {
     (gltf) => {
       // GLB 모델 위치 오프셋 (좌표계 정렬용)
       // Z offset 최대 2.2m까지 허용 (그 이상은 북쪽 노드가 건물 밖으로 나감)
-      gltf.scene.position.set(2.4, 0, 1.5)
+      gltf.scene.position.set(2.4, 0, 4.7)
       scene.add(gltf.scene)
       // GLB 내부 메쉬 수집 (디버그 클릭용)
       gltf.scene.traverse(obj => {
